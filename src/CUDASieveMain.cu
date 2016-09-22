@@ -19,17 +19,15 @@ int main(int argc, char* argv[])
   CudaSieve * sieve = new CudaSieve;
 
   // parse the command line options passed to the executable and then set appropriate flags
-  // host::parseOptions(argc, argv, sieve);
-  //
-  // // this is for the -h and --help switches
-  // if(sieve->isFlag(31)) return 0;
-  //
-  // sieve->countPrimes();
+  host::parseOptions(argc, argv, sieve);
 
-  for(uint32_t i = 10; i <= 10000; i++) std::cout << (10000000*i) << " " << sieve->countPrimes(10000000*i) << std::endl;
+  // this is for the -h and --help switches
+  if(sieve->isFlag(31)) return 0;
 
-  // if(!sieve->isFlag(30)) printf("\t%f seconds elapsed.\n", sieve->elapsedTime());
-  // cudaDeviceReset();
+  sieve->countPrimes();
+
+  if(!sieve->isFlag(30)) printf("\t%f seconds elapsed.\n", sieve->elapsedTime());
+  cudaDeviceReset();
 
   return 0;
 }

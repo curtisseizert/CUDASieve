@@ -1,0 +1,9 @@
+utils/
+bitsievegen
+readsieve
+*Launch*
+*.gch
+NewStuff.cpp
+CUDASieve
+include/CUDASieveMain.h
+include/CUDASieveMain.h
