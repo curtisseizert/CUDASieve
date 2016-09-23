@@ -3,13 +3,13 @@ A GPU accelerated C++/CUDA C implementation of the segmented sieve of Eratosthen
 
 Most of the testing has been done on a GTX 1080 gpu with CUDA 8.0 RC on the most recent version of <a href="https://www.archlinux.org"> Arch Linux</a> x86_64.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
 algorithm</a> on the GPU.
-While this code is in no way as elegant as that of Kim Walisch's<a href="http://primesieve.org">primesieve</a>, the use of GPU acceleration allows a
+While this code is in no way as elegant as that of Kim Walisch's <a href="http://primesieve.org">primesieve</a>, the use of GPU acceleration allows a
 significant speedup.  On the author's hardware, device initialization takes a constant 0.10 seconds regardless of the
-workload, but generation of small ranges (i.e. < 10<sup>10</sup>) is very fast thereafter.<br><br>
+workload, but generation of small ranges (i.e. < 10<sup>10</sup>) is very fast thereafter.<br>
 
 Benchmarks
 ----------
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>With GTX 1080:</b>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>With GTX 1080:</b></p>
 <table>
 <tr><td><b>Range</td><td><b>Time to generate list<br> of sieving primes</td><td><b>Time to sieve<br> this range</td><td><b>Total running time</td><td><b>Count</td></tr>
 <tr><td> 0 to 10<sup>7</sup> </td><td> 0.069 ms</td> <td> 0.37 ms</td><td> 0.100 s <td> 664 579</td></tr>
@@ -21,9 +21,10 @@ Benchmarks
 <tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.132 ms</td><td> 34.8 ms</td><td> 0.137 s</td><td> 38 726 266</td></tr>  
 <tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.739 ms</td><td> 36.2 ms</td><td> 0.143 s</td><td> 30 984 665</td></tr>  
 <tr><td> 2<sup>58</sup> to 2<sup>58</sup> + 2<sup>30</sup></td><td> 11.1 ms</td><td> 91.4 ms</td><td> 0.193 s </td><td> 26 707 352</td></tr></table>
+<p>*Separate sieves for <2<sup>40</sup> and >=2<sup>40</sup></p>
 <br>
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Hardware Scaling for sieving 0 to 10<sup>9</sup>:<br><br></b>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Hardware Scaling for sieving 0 to 10<sup>9</sup>:</b></p>
 <table>
 <tr><td><b>GPU</td><td><b>Time to generate list<br> of sieving primes</td><td><b>Time to sieve<br> this range</td><td><b>Total running time</td></tr>
 <tr><td>GTX 750</td><td>0.100 ms</td><td>67.5 ms</td><td>0.128 s</td></tr>
@@ -44,8 +45,7 @@ At this point, the code is barely more than a proof of principle, so I imagine t
 write their own makefile.  The include file names have not changed between CUDA 7.5 and 8.0 rc, so this can be built without
 modifications to the source code (at least in linux) with CUDA 7.5 as well.  As far as I am aware, the only compatability
 issue for older devices is the use of grids with x-dimensions larger than 65535 blocks.  However, this is only for devices
-older than compute capability 3.0, and the source code here works without problems on compute capability >=5.0 devices
-as I have verified.
+older than compute capability 3.0, and the source code here seems to work without problems on compute capability >=5.0 devices.
 
 This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
 for sieving up to 2<sup>64</sup>, which currently doesn't give the correct answer anyway (vide infra).  In any event, the fact that
@@ -59,11 +59,10 @@ exists, I just need to clean it up.
 Known Issues
 ------------
 
-  (1) The bottom of the sieving range must be a multiple of 2<sup>17</sup>.  This will be fixed in the near future<br>
-  (2) There are instances where the count is off by 1-4 on certain ranges where less than an entire sieving range is counted<br>
-  (3) Only multiples of 2<sup>24</sup> are acceptable inputs for the top or bottom if above 2<sup>40</sup>.<br>
-  (4) Somewhere above 2<sup>58</sup>, the sieve starts crossing off actual primes due to something other than a race condition.  
-      I am looking into this.<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1) The bottom of the sieving range must be a multiple of 2<sup>17</sup>.  This will be fixed in the near future<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(2) There are instances where the count is off by 1-4 on certain ranges where less than an entire sieving range is counted<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(3) Only multiples of 2<sup>24</sup> are acceptable inputs for the top or bottom if above 2<sup>40</sup>.<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(4) Somewhere above 2<sup>58</sup>, the sieve starts crossing off actual primes due to something other than a race condition.<br>
 <br>
 
 State of the Project
