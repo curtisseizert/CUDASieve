@@ -9,8 +9,7 @@ workload, but generation of small ranges (i.e. < 10<sup>10</sup>) is very fast t
 
 Benchmarks
 ----------
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<p><b>With GTX 1080:</b></p>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>With GTX 1080:</b>
 <table>
 <tr><td><b>Range</td><td><b>Time to generate list<br> of sieving primes</td><td><b>Time to sieve<br> this range</td><td><b>Total running time</td><td><b>Count</td></tr>
 <tr><td> 0 to 10<sup>7</sup> </td><td> 0.069 ms</td> <td> 0.37 ms</td><td> 0.100 s <td> 664 579</td></tr>
