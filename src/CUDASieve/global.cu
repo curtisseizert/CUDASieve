@@ -10,10 +10,22 @@ by Curtis Seizert - cseizert@gmail.com
 /*
                                   These functions are used for creating an ordered list of sieving primes on the GPU
 */
-
-#include "CUDASieveGlobal.cuh"
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include <math_functions.h>
 #include <iostream>
+
+#include "CUDASieve/device.cuh"
+#include "CUDASieve/global.cuh"
+#include "CUDASieve/device.cu" // for some reason linking together two files with device code kills performance
+                                // so it is necessary to link them by including a source file like this
+
+__constant__ uint8_t wheel30_g[8] = {1,7,11,13,17,19,23,29};
+__constant__ uint8_t wheel30Inc_g[8] = {6,4,2,4,2,4,6,2};
+__constant__ uint8_t lookup30_g[30] = {0,0,0,0,0,0,0,1,0,0,0,2,0,3,0,0,0,4,0,5,0,0,0,6,0,0,0,0,0,7};
+
+__constant__ uint16_t threads_g = 256;
+__constant__ uint32_t cutoff_g = 32768;
 
 __global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_histogram, uint32_t sieveBits, uint32_t maxPrime)
 {
@@ -100,13 +112,36 @@ __global__ void device::exclusiveScan(uint32_t * d_array, uint32_t * d_totals, u
   if(threadIdx.x == 0){ d_totals[blockIdx.x] = s_array[blockDim.x-1]; /*printf("%u\n", d_totals[blockIdx.x]);*/}
 }
 
+__global__ void device::exclusiveScan(uint32_t * d_array, volatile uint64_t * d_count, uint32_t size)
+{
+  extern __shared__ uint32_t s_array[];
+  uint32_t tidx = threadIdx.x;
+  uint32_t block_offset = blockIdx.x * blockDim.x;
+
+  if(tidx+block_offset < size) s_array[tidx] = d_array[tidx+block_offset];
+  else  s_array[tidx] = 0;
+  uint32_t sum = s_array[tidx];
+  __syncthreads();
+
+  for(uint32_t offset = 1; offset < blockDim.x; offset *= 2){
+    if(tidx >= offset) sum = s_array[tidx] + s_array[tidx - offset];
+    __syncthreads();
+    s_array[tidx] = sum;
+    __syncthreads();
+  }
+  if(tidx != 0) sum = s_array[tidx-1];
+  else sum = 0;
+  if(tidx+block_offset < size) d_array[tidx+block_offset] = sum;
+  if(threadIdx.x == 0){* d_count += s_array[blockDim.x-1]; printf("%u\n",s_array[blockDim.x-1]);}
+}
+
 __global__ void device::exclusiveScanLazy(uint32_t * s_array, uint32_t size)
 {
   uint32_t tidx = threadIdx.x;
   uint32_t sum;
 
   for(uint32_t offset = 1; offset <= size/2; offset *= 2){
-    for(int32_t i = size- 1 - tidx; i >= 0; i -= threads){
+    for(int32_t i = size- 1 - tidx; i >= 0; i -= threads_g){
       if(i >= offset){
         sum = s_array[i] + s_array[i - offset];
       }else{sum = s_array[i];}
@@ -115,7 +150,7 @@ __global__ void device::exclusiveScanLazy(uint32_t * s_array, uint32_t size)
       __syncthreads();
     }
   }
-  for(int32_t i = size - 1 - threadIdx.x; i >= 0; i -= threads){
+  for(int32_t i = size - 1 - threadIdx.x; i >= 0; i -= threads_g){
     if (i > 0) sum = s_array[i-1];
     else sum = 0;
     __syncthreads();
@@ -197,28 +232,6 @@ __global__ void device::smallSieve(uint32_t * d_primeList, volatile uint64_t * d
   device::moveCount(s_sieve, d_count);
   if(threadIdx.x == 0)atomicAdd((unsigned long long *)d_blocksComplete,1ull);
 }
-/*
-__global__ void device::smallSieveIncomplete(uint32_t * d_primeList, uint64_t * d_count,
-   uint64_t kernelBottom, uint32_t sieveBits, uint32_t primeListLength, uint64_t bottom)
-{
-  uint32_t sieveWords = sieveBits/32;
-  extern __shared__ uint32_t s_sieve[];
-  uint64_t bstart = kernelBottom - 2*sieveBits;
-
-  device::sieveInit(s_sieve, sieveWords);
-  device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
-  __syncthreads();
-  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
-  else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
-  __syncthreads();
-  device::countPrimesRemBottom(s_sieve, sieveWords, bottom);
-  __syncthreads();
-  device::moveCountBottom(s_sieve, d_count, sieveWords);
-  countPrimes(s_sieve, sieveWords);
-  __syncthreads();
-  moveCount(s_sieve, d_count, 0);
-}
-*/
 
 __global__ void device::smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t bottom, uint32_t sieveBits, uint32_t primeListLength, uint64_t top, volatile uint64_t * d_count, volatile uint64_t * d_blocksComplete)
 {
@@ -267,41 +280,25 @@ __global__ void device::smallSieveCopy(uint32_t * d_primeList, uint64_t * d_coun
                         These kernels are used in the large sieve (>2^40)
 */
 
-__global__ void device::getNextMult30(uint32_t * d_primeList, uint64_t * d_nextMult, uint32_t primeListLength, uint64_t bottom)
+// Add a packed bit array of uint8_t for whether or not d_away[i] == 0
+//in order to speed up memory accesses > 2^63.
+// During the actual sieve, this array will be put into shared mem,
+// but this will only take 8 bytes per block, so no big deal.
+
+__global__ void device::getNextMult30(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away, uint32_t primeListLength, uint64_t bottom, uint32_t bigSieveBits, uint8_t log2bigSieveSpan)
 {
-  uint32_t i = cutoff + threadIdx.x + blockIdx.x*blockDim.x;
+  uint32_t i = cutoff_g + threadIdx.x + blockIdx.x*blockDim.x;
   if(i < primeListLength){
     uint64_t n = 0;
     uint32_t p = d_primeList[i];
     uint64_t q = bottom/p;
     if(p > q) q = p;
     n |= (q / 30) << 3; // remember, this is used as a multiplier for a prime, so this will begin at the square of the prime.
-    n |= lookup30[(q % 30)];
-    while(p * ((30 * (n >> 3)) + wheel30[(n & 7)]) < bottom) n++;
-    d_nextMult[i] = n;
-  }
-}
-
-__global__ void device::getNextMult30_test(uint32_t * d_primeList, uint64_t * d_nextMult, uint32_t primeListLength, uint64_t bottom, uint32_t bigSieveBits)
-{
-  uint32_t i = cutoff + threadIdx.x + blockIdx.x*blockDim.x;
-  if(i < primeListLength){
-    uint32_t p = d_primeList[i];
-    uint64_t q = bottom/p;
-    if(p > q) q = p;
-    uint64_t quot = q / 30; // remember, this is used as a multiplier for a prime, so this will begin at the square of the prime.
-    uint8_t modIdx = lookup30[(q % 30)];
-    uint64_t mult = p * (30*quot + wheel30[modIdx & 7]);
-    while(mult < bottom){
-      mult += p*wheel30Inc[modIdx & 7];
-      modIdx = (modIdx + 1) & 7;
-    }
-    mult -= bottom;
-    uint32_t offset = mult & ((bigSieveBits << 1) - 1); // this is where the next multiple will hit the appropriate sieve
-    uint64_t away = mult >> 24; // this register begins as the number of sieves away this multiple is and need to not hard code that bit shift
-    away |= modIdx << 24;
-    away |= offset << 28;
-    d_nextMult[i] = away;
+    n |= lookup30_g[(q % 30)];
+    while(p * ((30 * (n >> 3)) + wheel30_g[(n & 7)]) < bottom) n++; // this is clunky...change if this shows promise
+    q = p * ((30 * (n >> 3)) + wheel30_g[(n & 7)]) - bottom;
+    d_away[i] = q >> log2bigSieveSpan;
+    d_next[i] = ((q & (2*bigSieveBits-1)) << 3) + (n & 7);
   }
 }
 
@@ -325,60 +322,29 @@ __global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve, 
   __syncthreads();
 }
 
-__global__ void device::bigSieveLg(uint32_t * d_primeList, uint64_t * d_nextMult, uint32_t * bigSieve, // bigSieveBits will be determined by total available shared mem.
-   uint64_t bstart, uint32_t bigSieveBits, uint32_t primeListLength, uint32_t sieveKB)
+__global__ void device::bigSieveLg(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away, uint32_t * bigSieve,
+  uint32_t bigSieveBits, uint32_t primeListLength, uint8_t log2bigSieveSpan)
 {
   uint64_t bidx = blockIdx.x + blockIdx.y * gridDim.x;
-  uint32_t i = cutoff + threadIdx.x + bidx*blockDim.x;
-  // __shared__ uint8_t s_wheel30[8];
-  // if(threadIdx.x < 8) s_wheel30[threadIdx.x] = wheel30[threadIdx.x];
+  uint32_t i = cutoff_g + threadIdx.x + bidx*blockDim.x;
 
-  uint64_t n;
-  uint32_t p;
   if(i < primeListLength){
-    p = d_primeList[i];
-    n = d_nextMult[i];
-    // uint64_t m = p * ((30 * (n >> 3)) + wheel30[n & 7u]) - bstart;
-    uint64_t m = 30 * (n >> 3);
-    m += wheel30[n & 7u];
-    m*= p;
-    m -= bstart;
-
-    for(; m < (bigSieveBits << 1); n++){
-      uint32_t idx = m >> 6;
-      uint16_t sidx = (m & 63) >> 1;
-      atomicOr(&bigSieve[idx], (1ul << sidx));
-      m += p*wheel30Inc[n & 7];
-    }
-    d_nextMult[i] = n;
-  }
-}
-
-__global__ void device::bigSieveLg_test(uint32_t * d_primeList, uint64_t * d_nextMult, uint32_t * bigSieve,
-  uint64_t bstart, uint32_t bigSieveBits, uint32_t primeListLength, uint32_t sieveKB)
-{
-  uint64_t bidx = blockIdx.x + blockIdx.y * gridDim.x;
-  uint32_t i = cutoff + threadIdx.x + bidx*blockDim.x;
-
-  uint64_t n;
-  uint32_t p;
-  if(i < primeListLength){
-    p = d_primeList[i];
-    n = d_nextMult[i];
-    if(n & 65535 != 0) n--;
+    if(d_away[i] != 0) d_away[i]--;
     else{
-      uint8_t modIdx = (n & 268435455) >> 24;
-      uint64_t off = n >> 32;
+      uint32_t p = d_primeList[i];
+      uint32_t n = d_next[i];
+      uint32_t off = n >> 3;
+      n &= 7;
 
-    for(; off < (bigSieveBits << 1); modIdx = (modIdx + 1) & 7){
+    for(; off < (bigSieveBits << 1); n = (n + 1) & 7){
       uint32_t idx = off >> 6;
       uint16_t sidx = (off & 63) >> 1;
       atomicOr(&bigSieve[idx], (1ul << sidx));
-      off += p*wheel30Inc[modIdx];
+      off += p*wheel30Inc_g[n];
     }
-    n = off >> 24;
-    n |= modIdx << 24;
-    n |= (off & ((bigSieveBits << 1)-1)) << 28;
+    n |= (off & (2*bigSieveBits-1)) << 3;
+    d_next[i] = n;
+    d_away[i] = (off >> log2bigSieveSpan) - 1;
     }
   }
 }
@@ -392,7 +358,7 @@ __global__ void device::bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, vol
   uint32_t count = 0;
 
   uint32_t blockStart = sieveWords*blockIdx.x;
-  for(uint32_t i = threadIdx.x; i < sieveWords; i += threads){
+  for(uint32_t i = threadIdx.x; i < sieveWords; i += threads_g){
     uint32_t x = bigSieve[i+blockStart];
     bigSieve[i+blockStart] ^= bigSieve[i+blockStart];
     for(uint8_t j = 0; j < 32; j++) count += 1 & ~(x >> j);
@@ -402,4 +368,35 @@ __global__ void device::bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, vol
   __syncthreads();
 
   device::moveCount(s_sieve, d_count);
+}
+
+/*
+                        Kernels for making lists of primes on the device
+*/
+
+
+__global__ void device::makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_histogram)
+{
+  uint32_t sieveWords = 256;
+  __shared__ uint32_t s_sieve[256];
+
+  device::sieveInit(s_sieve, d_bigSieve, sieveWords);
+  device::countPrimes(s_sieve, sieveWords);
+  __syncthreads();
+  device::moveCountHist(s_sieve, d_histogram);
+}
+
+__global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_histogram, uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime)
+{
+  uint32_t sieveWords = 256;
+  __shared__ uint32_t s_sieve[256];
+  __shared__ uint16_t s_counts[256];
+  uint64_t bstart = bottom+blockIdx.x*sieveWords*64;
+
+  device::sieveInit(s_sieve, d_bigSieve, sieveWords);
+  __syncthreads();
+  device::countPrimes(s_sieve, s_counts, sieveWords);
+  __syncthreads();
+  device::exclusiveScan(s_counts, sieveWords);
+  device::movePrimes(s_sieve, s_counts, sieveWords, d_primeOut, d_histogram, bstart, maxPrime);
 }
