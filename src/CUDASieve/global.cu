@@ -132,7 +132,7 @@ __global__ void device::exclusiveScan(uint32_t * d_array, volatile uint64_t * d_
   if(tidx != 0) sum = s_array[tidx-1];
   else sum = 0;
   if(tidx+block_offset < size) d_array[tidx+block_offset] = sum;
-  if(threadIdx.x == 0){* d_count += s_array[blockDim.x-1]; printf("%u\n",s_array[blockDim.x-1]);}
+  if(threadIdx.x == 0){* d_count += s_array[blockDim.x-1];}
 }
 
 __global__ void device::exclusiveScanLazy(uint32_t * s_array, uint32_t size)

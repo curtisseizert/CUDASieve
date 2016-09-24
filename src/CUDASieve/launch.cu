@@ -50,14 +50,22 @@ void PrimeOutList::allocate()
 
 void PrimeOutList::fetch(BigSieve * sieve)
 {
-  //cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
+  //uint64_t * h_ptr = h_primeOut + * KernelData::h_count;
+  uint64_t * d_ptr = d_primeOut + * KernelData::h_count;
+  //uint64_t lastcount = *KernelData::h_count;
+  cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
   cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 
   device::makeHistogram_PLout<<<sieve->bigSieveKB, THREADS_PER_BLOCK>>>(sieve->d_bigSieve, d_histogram); // this method of calculating blocks only works with 256 word shared sieves
   device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>(d_histogram, d_histogram_lg, blocks);
   device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>(d_histogram_lg, KernelData::d_count, hist_size_lg);
   device::increment<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>(d_histogram, d_histogram_lg, blocks);
-  device::makePrimeList_PLout<<<sieve->bigSieveKB, THREADS_PER_BLOCK>>>(d_primeOut, d_histogram, sieve->d_bigSieve, sieve->bottom, sieve->top);
+  device::makePrimeList_PLout<<<sieve->bigSieveKB, THREADS_PER_BLOCK>>>(d_ptr, d_histogram, sieve->d_bigSieve, sieve->bottom, sieve->top);
+}
+
+void PrimeOutList::printPrimes()
+{
+  for(uint64_t i = 0; i < *KernelData::h_count; i++) printf("%llu\n", h_primeOut[i]);
 }
 
 PrimeList::PrimeList(uint32_t maxPrime)
@@ -233,6 +241,7 @@ void BigSieve::launchLoop(KernelData & kernelData)
   cudaEventRecord(start);
 
   for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
+    cudaDeviceSynchronize();
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>(d_primeList, d_bigSieve, bottom,
       primeListLength, sieveKB);
@@ -290,13 +299,16 @@ void BigSieve::launchLoopPrimes(KernelData & kernelData, CudaSieve * sieve) // m
     cudaDeviceSynchronize();
 
     newlist.fetch(this);
+    cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
+
   }
-  cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, newlist.numGuess*sizeof(uint64_t), cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+  cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
   kernelData.displayProgress(totIter, totIter);
   std::cout<<std::endl;
-  //for(uint16_t i = 0; i < 65535; i++) std::cout << newlist.h_primeOut[i] << std::endl;
+  newlist.printPrimes();
 }
 
 void BigSieve::displayCount(KernelData & kernelData)

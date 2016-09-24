@@ -52,6 +52,7 @@ private:
 public:
   uint64_t * getPrimeOut(){return h_primeOut;}
   PrimeOutList(CudaSieve * sieve);
+  void printPrimes();
 };
 
 class PrimeList{

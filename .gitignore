@@ -4,3 +4,4 @@ readsieve
 *.gch
 NewStuff.cpp
 *.o
+./CUDASieve
