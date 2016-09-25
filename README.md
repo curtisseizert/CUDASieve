@@ -36,13 +36,16 @@ Benchmarks
 The output for each of these ranges has been verified against that of primesieve both in count and (for the ranges covering
 less than a span of 2<sup>32</sup>) in the actual primes generated.  Additionally, this code contains a way of generating a
  list of (32 bit) primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
-  Generating the list of 189 961 801 primes from 32 to 4e9 takes just 99 ms.  This is about 7.5 GB of primes/second.<br><br>
+  Generating the list of 189 961 801 primes from 32 to 4e9 takes just 99 ms.  This is about 7.5 GB of primes/second.  Primes
+  are also prepared to be printed in the same way, with most of the overhead coming from the (currently synchronous) CudaMemcpy
+  required.  For example, the kernel time for preparing an array of all the (26 707 352) primes from 2<sup>58</sup> to 2<sup>58</sup>+2<sup>30</sup> and getting this array to the host is 123 ms with the GTX 1080.  However, the device array is
+  filled in only 92 ms, essentially the same time for getting a count.<br><br>
 
 Usability
 ---------
 
 At this point, the code is barely more than a proof of principle, so I imagine that anyone who is interested in this can
-write their own makefile.  The include file names have not changed between CUDA 7.5 and 8.0 rc, so this can be built without
+modify the makefile to their needs.  The include file names have not changed between CUDA 7.5 and 8.0 rc, so this can be built without
 modifications to the source code (at least in linux) with CUDA 7.5 as well.  As far as I am aware, the only compatability
 issue for older devices is the use of grids with x-dimensions larger than 65535 blocks.  However, this is only for devices
 older than compute capability 3.0, and the source code here seems to work without problems on compute capability >=5.0 devices.
@@ -52,8 +55,7 @@ for sieving up to 2<sup>64</sup>, which currently doesn't give the correct answe
 large primes are handled in global memory, rather than on-chip, means that increasing the number of blocks working on the
 task of sieving these large primes does not increase the amount of memory used since the data set is not duplicated.
 
-The code here only demonstrates counting, but will very soon support creating lists of primes on the host.  This code already
-exists, I just need to clean it up.
+Support for printing primes has just been added, but this is only available above 2<sup>40</sup>.
 <br>
 
 Known Issues
