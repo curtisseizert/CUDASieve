@@ -1,20 +1,47 @@
-CUDADIR = /opt/cuda/
-GPUARCH = sm_61
-
-NVCC = $(CUDADIR)/bin/nvcc
-CC = g++
-CCFLAGS = -c -O2
-NVCCFLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPUARCH)
-INCLUDES = -I ./src/ -I ./include/ -I $(CUDADIR)/targets/x86_64-linux/include/
-CSRCS = src/CUDASieve/main.cpp src/CUDASieve/host.cpp src/CUDASieve/cudasieve.cpp
-NVSRCS = src/CUDASieve/global.cu src/CUDASieve/launch.cu
-OBJS = main.o host.o cudasieve.o
+# Location of the CUDA toolkit
+CUDA_DIR = /opt/cuda
+# Compute capability of the target GPU
+GPU_ARCH = sm_61
+# Compilers to use
+NVCC = $(CUDA_DIR)/bin/nvcc
+CC = clang
+# Flags for the host compiler
+CCFLAGS = -c -O3 -std=c++11
+CC_DEBUG_FLAGS = -g -O0 -c -std=c++11
+# Flags for nvcc
+# ptxas-options=-dlcm=cg (vs. default of ca) is about a 2% performance gain
+NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) --ptxas-options=-dlcm=cg
+NVCC_DEBUG_FLAGS = -g -G -lineinfo
+NVCC_PROFILE_FLAGS = -lineinfo
+#
+INCLUDES = -I ./include/ -I ./src/ -I $(CUDA_DIR)/targets/x86_64-linux/include/
+CC_LIBS = -lm -lstdc++
+NVCC_LIBS = -lcudart
+#
+CLI_SRC_DIR = src
+SRC_DIR = src/CUDASieve
+OBJ_DIR = obj
+##
+## Cannot use device.cu here because it is #include linked to global.cu!
+## this is necessary because the nvcc linker sucks with device code!
+NV_SRCS = src/CUDASieve/global.cu src/CUDASieve/launch.cu
+#
+_OBJS = main.o host.o cudasieve.o
+OBJS = $(patsubst %,$(OBJ_DIR)/%,$(_OBJS))
+#
 MAIN = CUDASieve
 
-all:    $(MAIN)
+all: $(MAIN)
+
+$(MAIN): $(NV_SRCS) $(OBJS)
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $^ -o $@
 	@echo  CUDASieve has been compiled
 
-$(MAIN): $(NVSRCS) $(CSRCS)
-	$(CC) $(CCFLAGS) $(INCLUDES) $(CSRCS)
-	$(NVCC) $(NVCCFLAGS) $(INCLUDES) $(NVSRCS) $(OBJS) -o $(MAIN)
-	rm $(OBJS)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
+
+$(OBJ_DIR)/%.o: $(CLI_SRC_DIR)/%.cpp
+	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
+
+clean:
+	rm -f obj/*.o

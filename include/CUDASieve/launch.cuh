@@ -1,6 +1,6 @@
 /*
 
-CUDASieveLaunch.hpp
+CUDASieveLaunch.cuh
 
 Host functions for CUDASieve which interface with the device
 Curtis Seizert - cseizert@gmail.com
@@ -41,18 +41,25 @@ class CudaSieve;
 
 class PrimeOutList{
   friend class BigSieve;
+  friend class KernelData;
 
 private:
   uint32_t * d_histogram, *d_histogram_lg;
   uint32_t hist_size_lg, blocks;
   uint16_t threads;
-  uint64_t * h_primeOut, * d_primeOut, numGuess;
+  uint64_t * h_primeOut, * d_primeOut;
+  uint64_t numGuess;
   void allocate();
   void fetch(BigSieve * sieve);
+  void cleanupMin();
+  void cleanupAllDevice();
+
 public:
-  uint64_t * getPrimeOut(){return h_primeOut;}
-  PrimeOutList(CudaSieve * sieve);
+  uint64_t * getPrimeOut();
   void printPrimes();
+
+  PrimeOutList(CudaSieve * sieve);
+  ~PrimeOutList();
 };
 
 class PrimeList{
@@ -68,7 +75,7 @@ public:
   uint32_t getBlocks(){return blocks;}
   uint16_t getThreads(){return threads;}
   uint32_t * getPtr(){return d_primeList;}
-  void sievePrimeList(CudaSieve * sieve);
+  void sievePrimeList();
   uint32_t getPrimeListLength();
   void allocate();
 
@@ -88,7 +95,7 @@ public:
   SmallSieve(CudaSieve * sieve);
   ~SmallSieve(){};
   void launch(KernelData & kernelData, CudaSieve * sieve);
-  void displaySieveTime(CudaSieve * sieve);
+  void displaySieveTime();
 };
 
 class BigSieve{

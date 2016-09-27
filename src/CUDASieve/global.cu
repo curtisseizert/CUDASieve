@@ -3,13 +3,11 @@
 CUDASieveGlobal.cu
 
 Contains the __global__ functions in the device code for CUDASieve 1.0
-by Curtis Seizert - cseizert@gmail.com
+by Curtis Seizert
+<cseizert@gmail.com>
 
 */
 
-/*
-                                  These functions are used for creating an ordered list of sieving primes on the GPU
-*/
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <math_functions.h>
@@ -17,8 +15,9 @@ by Curtis Seizert - cseizert@gmail.com
 
 #include "CUDASieve/device.cuh"
 #include "CUDASieve/global.cuh"
-#include "CUDASieve/device.cu" // for some reason linking together two files with device code kills performance
-                                // so it is necessary to link them by including a source file like this
+#include "CUDASieve/device.cu"
+  // for some reason linking together two files with device code kills performance
+  // so it is necessary to link them by including a source file like this
 
 __constant__ uint8_t wheel30_g[8] = {1,7,11,13,17,19,23,29};
 __constant__ uint8_t wheel30Inc_g[8] = {6,4,2,4,2,4,6,2};
@@ -27,7 +26,19 @@ __constant__ uint8_t lookup30_g[30] = {0,0,0,0,0,0,0,1,0,0,0,2,0,3,0,0,0,4,0,5,0
 __constant__ uint16_t threads_g = 256;
 __constant__ uint32_t cutoff_g = 32768;
 
-__global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_histogram, uint32_t sieveBits, uint32_t maxPrime)
+/*
+        *******************************************************
+        ******Kernels for making a list of sieving primes******
+        *******************************************************
+*/
+
+/*
+Kernel used for creating list of primes on the device with knowledge only of
+3-37.  See device.cu - sieveFirst(...)
+*/
+
+__global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_histogram,
+   uint32_t sieveBits, uint32_t maxPrime)
 {
   uint64_t bidx = blockIdx.x;
   uint32_t sieveWords = sieveBits/32;
@@ -45,6 +56,11 @@ __global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_hist
   device::exclusiveScanBig(s_counts, sieveWords);
   device::movePrimesFirst(s_sieve, s_counts, sieveWords, d_primeList, d_histogram, bstart, maxPrime);
 }
+
+/*
+Some scan functions for incrementing the various histograms made in order
+to index the primes on the device for creating a list.
+*/
 
 __global__ void device::inclusiveScan(uint32_t * d_array, uint16_t size)
 {
@@ -109,7 +125,7 @@ __global__ void device::exclusiveScan(uint32_t * d_array, uint32_t * d_totals, u
   if(tidx != 0) sum = s_array[tidx-1];
   else sum = 0;
   if(tidx+block_offset < size) d_array[tidx+block_offset] = sum;
-  if(threadIdx.x == 0){ d_totals[blockIdx.x] = s_array[blockDim.x-1]; /*printf("%u\n", d_totals[blockIdx.x]);*/}
+  if(threadIdx.x == 0) d_totals[blockIdx.x] = s_array[blockDim.x-1];
 }
 
 __global__ void device::exclusiveScan(uint32_t * d_array, volatile uint64_t * d_count, uint32_t size)
@@ -168,7 +184,13 @@ __global__ void device::increment(uint32_t * d_array, uint32_t * d_totals, uint3
   if(tidx < arr_size) d_array[tidx+block_offset] += increment;
 }
 
-__global__ void device::makeHistogram(uint32_t * d_primeList, uint32_t * d_histogram, uint32_t sieveBits, uint32_t primeListLength)
+/*
+The same as a small sieve but moves the count to an array rather than to a single
+data point.
+*/
+
+__global__ void device::makeHistogram(uint32_t * d_primeList, uint32_t * d_histogram,
+   uint32_t sieveBits, uint32_t primeListLength)
 {
   uint64_t bidx = blockIdx.x;
   uint32_t sieveWords = sieveBits/32;
@@ -186,7 +208,15 @@ __global__ void device::makeHistogram(uint32_t * d_primeList, uint32_t * d_histo
   device::moveCountHist(s_sieve, d_histogram);
 }
 
-__global__ void device::makePrimeList(uint32_t * d_primeList, uint32_t * d_histogram, uint32_t sieveBits, uint32_t primeListLength, uint32_t maxPrime)
+/*
+Uses the indexing data generated in the other kernels to place the primes
+in an array rather than simply counting them.  Note that this kernel requires
+that all the primes have been sieved and counted previously and then sieves them
+again :-/
+*/
+
+__global__ void device::makePrimeList(uint32_t * d_primeList, uint32_t * d_histogram,
+   uint32_t sieveBits, uint32_t primeListLength, uint32_t maxPrime)
 {
   uint64_t bidx = blockIdx.x;
   uint32_t sieveWords = sieveBits/32;
@@ -207,7 +237,9 @@ __global__ void device::makePrimeList(uint32_t * d_primeList, uint32_t * d_histo
 }
 
 /*
-                              These kernels are for sieving small primes (< 2^40)
+          *****************************************************
+          ******Kernels for sieving small primes (< 2^40)******
+          *****************************************************
 */
 
 __global__ void device::smallSieve(uint32_t * d_primeList, volatile uint64_t * d_count,
@@ -233,7 +265,9 @@ __global__ void device::smallSieve(uint32_t * d_primeList, volatile uint64_t * d
   if(threadIdx.x == 0)atomicAdd((unsigned long long *)d_blocksComplete,1ull);
 }
 
-__global__ void device::smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t bottom, uint32_t sieveBits, uint32_t primeListLength, uint64_t top, volatile uint64_t * d_count, volatile uint64_t * d_blocksComplete)
+__global__ void device::smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t bottom,
+   uint32_t sieveBits, uint32_t primeListLength, uint64_t top, volatile uint64_t * d_count,
+    volatile uint64_t * d_blocksComplete)
 {
   uint64_t bidx = blockIdx.x;
   uint32_t sieveWords = sieveBits/32;
@@ -277,23 +311,38 @@ __global__ void device::smallSieveCopy(uint32_t * d_primeList, uint64_t * d_coun
 }
 
 /*
-                        These kernels are used in the large sieve (>2^40)
+          *************************************************
+          *****Kernels used in the large sieve (>2^40)*****
+          *************************************************
 */
 
-// Add a packed bit array of uint8_t for whether or not d_away[i] == 0
-//in order to speed up memory accesses > 2^63.
-// During the actual sieve, this array will be put into shared mem,
-// but this will only take 8 bytes per block, so no big deal.
+/*
+This kernel does the initial "bucket" calculations.  Data is placed in a pair of arrays:
+one uint16_t array is used to hold information on how many sieves away the next
+time the prime will hit the sieve and the other uint32_t array holds both the information
+on (1) what index in the wheel modulo 30 the next hit will be (bits 0-2) and where
+in the appropriate sieve this hit will be (bits 3-31).  Since hits are far apart
+on larger ranges, it pays to have most memory accesses confined to a single array
+of a smaller data type (d_away) where the memory addresses for the needed data are
+contiguous and a separate array with of a larger data type (d_next) for the less
+frequent accesses when hits do occur.  Actually, most of the time, a thread will
+simply decrement its element of d_away without ever accessing either d_next or the list
+of prime numbers.  The reduction in time to sieve ranges above 2^58 with the use
+of separate arrays in this manner is ~50%.
+*/
 
-__global__ void device::getNextMult30(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away, uint32_t primeListLength, uint64_t bottom, uint32_t bigSieveBits, uint8_t log2bigSieveSpan)
+__global__ void device::getNextMult30(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away,
+   uint32_t primeListLength, uint64_t bottom, uint32_t bigSieveBits, uint8_t log2bigSieveSpan)
 {
   uint32_t i = cutoff_g + threadIdx.x + blockIdx.x*blockDim.x;
   if(i < primeListLength){
     uint64_t n = 0;
     uint32_t p = d_primeList[i];
     uint64_t q = bottom/p;
-    if(p > q) q = p;
-    n |= (q / 30) << 3; // remember, this is used as a multiplier for a prime, so this will begin at the square of the prime.
+    //if(p > q) q = p; // this would begin at the start of the prime, but this
+    // method does not work for ranges > 2^40.  It does not seem to provides
+    // a significant speedup in any event.
+    n |= (q / 30) << 3; // remember, this is used as a multiplier for a prime
     n |= lookup30_g[(q % 30)];
     while(p * ((30 * (n >> 3)) + wheel30_g[(n & 7)]) < bottom) n++; // this is clunky...change if this shows promise
     q = p * ((30 * (n >> 3)) + wheel30_g[(n & 7)]) - bottom;
@@ -302,11 +351,18 @@ __global__ void device::getNextMult30(uint32_t * d_primeList, uint32_t * d_next,
   }
 }
 
-__global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve, // bigSieveBits will be determined by total available shared mem.
+/*
+The sieve for smaller primes is essentially the same below and above 2^40.  The
+differences are (1) there is a defined cutoff for sieving middle primes that is
+much smaller than the length of the list of sieving primes.  Experimentally, this
+cutoff does not matter much between 2^15 and 2^17.  (2) Rather than counting the
+primes in the sieve, the elements are copied through an atomicOr operation to the
+larger (global memory) sieve.
+*/
+
+__global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve,
    uint64_t bottom, uint32_t primeListLength, uint32_t sieveKB)
 {
-  // starting each block at bottom + sieveBits*blockIdx.x covers the entire large sieve size due to how blocks are calculated on the host side
-  // similarly, the large sieve array is covered when blocks are each spaced by sieveWords
   uint32_t sieveBits = sieveKB*8192;
   uint32_t sieveWords = sieveBits/32;
   extern __shared__ uint32_t s_sieve[];
@@ -322,8 +378,20 @@ __global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve, 
   __syncthreads();
 }
 
-__global__ void device::bigSieveLg(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away, uint32_t * bigSieve,
-  uint32_t bigSieveBits, uint32_t primeListLength, uint8_t log2bigSieveSpan)
+/*
+This kernel utilizes global memory as well as the impelementation of the bucket
+algorithm.  Most of the time, it just decrements d_away, but when more work is
+required it (1) unpacks an element of d_away (2) translates the position of the hit
+to word and bit of the sieve array with bits 3-31 (3) increments the next multiple
+of the prime as necessary with the array of bucket increments and crosses off the
+next position of the sieve if necessary, then places information in the necessary
+arrays.  The sieves away is (calculated offset)/(the size of the sieve) - 1 [for
+the current sieve].  The next hit is (calculated offset)%(size of the sieve)
+and the position in the bucket is just incremented each hit.
+*/
+
+__global__ void device::bigSieveLg(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away,
+   uint32_t * bigSieve, uint32_t bigSieveBits, uint32_t primeListLength, uint8_t log2bigSieveSpan)
 {
   uint64_t bidx = blockIdx.x + blockIdx.y * gridDim.x;
   uint32_t i = cutoff_g + threadIdx.x + bidx*blockDim.x;
@@ -349,6 +417,12 @@ __global__ void device::bigSieveLg(uint32_t * d_primeList, uint32_t * d_next, ui
   }
 }
 
+/*
+This is a pretty simple kernel where data from the big sieve are counted and the
+words are counted for number of bits remaining as 0s.  This also zeros the bigSieve
+array.  Zeroing in this way is much faster than a separate cudaMemset operation.
+*/
+
 __global__ void device::bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, volatile uint64_t * d_count)
 {
   uint32_t sieveBits = sieveKB*8192;
@@ -371,7 +445,9 @@ __global__ void device::bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, vol
 }
 
 /*
-                        Kernels for making lists of primes on the device
+        ***********************************************************
+        ******Kernels for making lists of primes on the device*****
+        ***********************************************************
 */
 
 
@@ -386,7 +462,8 @@ __global__ void device::makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_
   device::moveCountHist(s_sieve, d_histogram);
 }
 
-__global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_histogram, uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime)
+__global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_histogram,
+   uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime)
 {
   uint32_t sieveWords = 256;
   __shared__ uint32_t s_sieve[256];

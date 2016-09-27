@@ -13,7 +13,7 @@ The naming convention for sieve sizes:
 
 */
 #include <stdint.h>
-#include <ctime>
+#include <time.h>
 
 #ifndef _CUDASIEVE
 #define _CUDASIEVE
@@ -37,6 +37,7 @@ class CudaSieve {
   friend class SmallSieve;
   friend class BigSieve;
   friend class PrimeOutList;
+  friend class Debug;
 
 private:
   bool flags[32];

@@ -79,7 +79,7 @@ void CudaSieve::makePrimeList()
   PrimeList primelist(maxPrime);
 
   primelist.allocate();
-  primelist.sievePrimeList(this);
+  primelist.sievePrimeList();
   primeListLength = primelist.getPrimeListLength();
   if(!flags[30]) primelist.displayTime();
   this -> d_primeList = primelist.getPtr();
@@ -91,7 +91,7 @@ void CudaSieve::makePrimeList(uint32_t maxPrime)
   PrimeList primelist(maxPrime);
 
   primelist.allocate();
-  primelist.sievePrimeList(this);
+  primelist.sievePrimeList();
   primeListLength = primelist.getPrimeListLength();
   if(!flags[30]) primelist.displayTime();
   this -> d_primeList = primelist.getPtr();
@@ -117,8 +117,12 @@ void CudaSieve::bigSieveCtl()
   bigsieve ->setParameters(this);
   bigsieve ->allocate();
   bigsieve ->fillNextMult();
-  if(!flags[0])bigsieve ->launchLoop(kernelData);
-  else bigsieve ->launchLoopPrimes(kernelData, this);
+  if(flags[0] && !flags[8])   bigsieve ->launchLoopPrimes(kernelData, this);
+      // if copy and not debug generate list of primes on the host
+  if(!flags[0] && !flags[8])  bigsieve ->launchLoop(kernelData);
+      // if not copy and not debug count primes
+  if(flags[0] && flags[8])    bigsieve->launchLoopCopy(kernelData, this);
+      // if copy and debug copy sieve back to host
   bigsieve ->displayCount(kernelData);
   bigsieve ->cleanUp();
 }
@@ -129,7 +133,7 @@ void CudaSieve::smallSieveCtl()
   SmallSieve smallsieve(this);
   smallsieve.launch(kernelData, this);
   cudaDeviceSynchronize();
-  if(!flags[30]) smallsieve.displaySieveTime(this);
+  if(!flags[30]) smallsieve.displaySieveTime();
 }
 
 void CudaSieve::countPrimes()
