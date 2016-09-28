@@ -78,6 +78,8 @@ public:
   uint64_t getTop(){return top;}
   bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
+  void checkRange();
+
   void displayRange();
   void displaySieveAttributes();
 

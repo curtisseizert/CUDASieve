@@ -76,7 +76,7 @@ __constant__ uint8_t wheel30Inc[8] = {6,4,2,4,2,4,6,2};
 __constant__ uint8_t lookup30[30] = {0,0,0,0,0,0,0,1,0,0,0,2,0,3,0,0,0,4,0,5,0,0,0,6,0,0,0,0,0,7};
 
 __constant__ uint16_t threads = 256;
-__constant__ uint32_t cutoff = 32768;
+__constant__ uint32_t cutoff = 65536;
 
 /*
             #############################################
@@ -172,7 +172,7 @@ __device__ void device::sieveMedPrimesPL(uint32_t * s_sieve, uint32_t * d_primeL
 }
 
 __device__ void device::sieveMiddlePrimes(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
-  uint32_t primeListLength, uint32_t sieveBits)
+  uint32_t sieveBits)
 {
   for(uint32_t pidx = threadIdx.x; pidx < cutoff; pidx += threads){ // this accepts a list of sieving primes > 37
       uint32_t p = d_primeList[pidx];
