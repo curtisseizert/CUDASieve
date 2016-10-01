@@ -41,7 +41,7 @@ void host::displayAttributes(CudaSieve & sieve)
 
   if(!sieve.flags[2] && !sieve.flags[30]){
     std::cout << "Small Sieve parameters" << std::endl;
-    std::cout << "Total Blocks    :  " << sieve.totBlocks << std::endl;
+    std::cout << "Full Blocks     :  " << sieve.totBlocks << std::endl;
     std::cout << "Threads         :  " << THREADS_PER_BLOCK << std::endl;
     std::cout << "Sieve Size      :  " << sieve.sieveKB << " kb" << std::endl;
   }

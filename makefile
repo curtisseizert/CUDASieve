@@ -1,7 +1,7 @@
 # Location of the CUDA toolkit
 CUDA_DIR = /opt/cuda
 # Compute capability of the target GPU
-GPU_ARCH = sm_50
+GPU_ARCH = sm_61
 # Compilers to use
 NVCC = $(CUDA_DIR)/bin/nvcc
 CC = clang

@@ -382,7 +382,7 @@ void KernelData::allocate()
 
 void KernelData::displayProgress(CudaSieve & sieve)
 {
-  if(!sieve.isFlag(30)){
+  if(!sieve.isFlag(30) && sieve.totBlocks != 0){
     uint64_t value = 0;
     uint64_t counter = 0;
     do{
@@ -395,8 +395,9 @@ void KernelData::displayProgress(CudaSieve & sieve)
        }
     }while (value < sieve.totBlocks+sieve.isFlag(4));
     counter = * KernelData::h_count;
-  std::cout << "\t" << "100% complete\t\t" << counter << " primes counted.\r";
   }
+  cudaDeviceSynchronize();
+  if(!sieve.isFlag(30)) std::cout << "\t" << "100% complete\t\t" << * KernelData::h_count << " primes counted.\r";
 }
 
 inline void KernelData::displayProgress(uint64_t value, uint64_t totIter)

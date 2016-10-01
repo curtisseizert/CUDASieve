@@ -41,6 +41,7 @@ void CudaSieve::allocateSieveOut(uint64_t size){sieveOut = new uint32_t[size/siz
 void CudaSieve::setKernelParam()
 {
   if(top > 1ull << 63 && !flags[18]) bigSieveKB = 1u << 12;
+  if(top < 1u << 23) sieveKB = 2;
   sieveBits = sieveKB << 13;
   bigSieveBits = bigSieveKB << 13;
   uint64_t smTop = std::min((unsigned long long) top, 1ull << 40);
@@ -48,7 +49,7 @@ void CudaSieve::setKernelParam()
   totBlocks = (smTop - kernelBottom) / (2 *  sieveBits);
   smKernelTop = kernelBottom + (totBlocks * sieveBits * 2);
   cudaSetDevice(gpuNum);
-  //checkRange();
+  checkRange();
   setFlags();
 }
 
@@ -56,14 +57,14 @@ void CudaSieve::checkRange()
 {
   if(bottom > top)
     {std::cerr << "CUDASieve Error: the bottom of the range must be smaller than the top." << std::endl; exit(1);}
+  if(top < 128)
+    {std::cerr << "CUDASieve Error: the top of the range must be above 128." << std::endl; exit(1);}
   if((unsigned long long)top > 18446744056529682432ull) // 2^64-2^35
-    {std::cerr << "CUDASieve Error: top above supported range (max is 2^64-2^34)." << std::endl; exit(1);}
-  if((top > 1ull << 40) && (top %(bigSieveBits*2) != 0))
-    {std::cerr << "CUDASieve Error: the top of the range must be a multiple of sieve size above 2**40." << std::endl; exit(1);}
+    {std::cerr << "CUDASieve Error: top above supported range (max is 2^64-2^35)." << std::endl; exit(1);}
   if((bottom < 1ull << 40) && (bottom %(sieveBits*2) !=0))
     {std::cerr << "CUDASieve Error: bottom must be a multiple of sieve size." << std::endl; exit(1);}
-  if((bottom > 1ull << 40) && (bottom%(bigSieveBits*2) != 0))
-    {std::cerr << "CUDASieve Error: bottom must be a multiple of sieve size." << std::endl; exit(1);}
+  if((bottom > 1ull << 40) && ((top-bottom)%(bigSieveBits*2) != 0))
+    {std::cerr << "CUDASieve Error: above 2**40 range must be a multiple of sieve size." << std::endl; exit(1);}
 }
 
 void CudaSieve::setFlags()
