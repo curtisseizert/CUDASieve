@@ -149,6 +149,7 @@ in shared memory.
 __device__ void device::sieveMedPrimes(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
   uint32_t primeListLength, uint32_t sieveBits)
 {
+  #pragma unroll 1
   for(uint32_t pidx = threadIdx.x; pidx < primeListLength; pidx += threads){ // this accepts a list of sieving primes > 37
     uint32_t p = d_primeList[pidx];
     uint32_t off = p - bstart % p;
@@ -271,6 +272,7 @@ __device__ void device::countPrimesHist(uint32_t * s_sieve, uint32_t * s_counts,
 __device__ void device::countPrimes(uint32_t * s_sieve, uint32_t sieveWords) // destroys original sieve data
 {
   uint16_t count = 0;
+  #pragma unroll
   for(uint16_t i = threadIdx.x; i < sieveWords; i += threads)
   {
     uint32_t s = ~s_sieve[i];

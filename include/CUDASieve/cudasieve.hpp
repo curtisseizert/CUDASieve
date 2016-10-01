@@ -14,6 +14,10 @@ The naming convention for sieve sizes:
 */
 #include <stdint.h>
 #include <time.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include "host.hpp"
+
 
 #ifndef _CUDASIEVE
 #define _CUDASIEVE
@@ -30,6 +34,14 @@ The naming convention for sieve sizes:
 
 class KernelData;
 
+inline void safeFree(uint32_t * array) {if(array != NULL){free(array); array = NULL;}}
+inline void safeFree(uint64_t * array) {if(array != NULL){free(array); array = NULL;}}
+inline void safeCudaFree(uint16_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
+inline void safeCudaFree(uint32_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
+inline void safeCudaFree(uint64_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
+inline void safeCudaFreeHost(uint32_t * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}
+inline void safeCudaFreeHost(uint64_t * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}
+
 class CudaSieve {
 
   friend class KernelData;
@@ -38,33 +50,35 @@ class CudaSieve {
   friend class BigSieve;
   friend class PrimeOutList;
   friend class Debug;
+  friend void host::displayAttributes(CudaSieve & sieve);
 
 private:
   bool flags[32];
-  uint64_t bottom = 0, top = (1u << 30), kernelBottom, smKernelTop, totBlocks, count = 0, * primeOut;
+  uint64_t bottom = 0, top = (1u << 30), kernelBottom, smKernelTop, totBlocks, count = 0, * h_primeOut, * d_primeOut;
   uint16_t gpuNum = 0;
   uint32_t bigSieveBits, bigSieveKB = 1024, sieveBits, sieveKB = 16, primeListLength, * d_primeList;
   clock_t start_time;
 
   void setFlags();
   void setKernelParam();
+  void checkRange();
 
   void allocateSieveOut();
   void allocateSieveOut(uint64_t size); // size in bytes
 
+  void displayRange();
+  void displaySieveAttributes();
+
+  void run();
   void launchCtl();
-  void smallSieveCtl();
-  void bigSieveCtl();
+
+  void reset();
 
 public:
   uint32_t * sieveOut;
 
   CudaSieve();
   ~CudaSieve(){};
-
-  void setDefaults();
-  void setSieveOutBits();
-  void setSieveBitSize();
 
   void setTop(uint64_t top);
   void setBottom(uint64_t bottom);
@@ -78,17 +92,14 @@ public:
   uint64_t getTop(){return top;}
   bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
-  void checkRange();
-
-  void displayRange();
-  void displaySieveAttributes();
-
-  void makePrimeList();
   void makePrimeList(uint32_t maxPrime);
 
-  void countPrimes();
+  void CLIPrimes();
   uint64_t countPrimes(uint64_t top);
   uint64_t countPrimes(uint64_t bottom, uint64_t top);
+
+  uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
+  uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
 
   void printSieveOut();
 

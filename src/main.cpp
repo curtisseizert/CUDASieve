@@ -19,20 +19,16 @@ int main(int argc, char* argv[])
 {
   // start the timer
   CudaSieve * sieve = new CudaSieve;
-  KernelData::allocate();
 
   // parse the command line options passed to the executable and then set appropriate flags
   host::parseOptions(argc, argv, sieve);
 
-  // start profiler
-  // cudaProfilerStart();
-
   // this is for the -h and --help switches
   if(sieve->isFlag(31)) return 0;
 
-  sieve->countPrimes();
+  sieve->CLIPrimes();
 
-  printf("\t%f seconds elapsed.\n", sieve->elapsedTime());
+  if(!sieve->isFlag(30)) printf("\t%f seconds elapsed.\n", sieve->elapsedTime());
   cudaDeviceReset();
 
   return 0;

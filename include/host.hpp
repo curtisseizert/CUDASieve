@@ -19,8 +19,13 @@ The naming convention for sieve sizes:
 #define _CUDASIEVE_HOST
 
 class CudaSieve;
+class BigSieve;
+class SmallSieve;
 
 namespace host {
+
+    void displayAttributes(const BigSieve & bigsieve);
+    void displayAttributes(CudaSieve & sieve);
 
     void help();
     uint64_t echo(char * argv);

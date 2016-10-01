@@ -18,6 +18,7 @@ The naming convention for sieve sizes:
 #include <device_launch_parameters.h>
 #include <cuda_profiler_api.h>
 #include <stdint.h>
+#include "host.hpp"
 
 #ifndef _CUDASIEVE_LAUNCH
 #define _CUDASIEVE_LAUNCH
@@ -38,6 +39,23 @@ class SmallSieve;
 class BigSieve;
 class PrimeOutList;
 class CudaSieve;
+class KernelTime;
+
+
+class KernelTime{
+  friend class BigSieve;
+  friend class SmallSieve;
+private:
+  cudaEvent_t start_, stop_;
+public:
+  KernelTime();
+  ~KernelTime();
+
+  void displayTime();
+  inline void start();
+  inline void stop();
+  float get_ms();
+};
 
 class PrimeOutList{
   friend class BigSieve;
@@ -50,99 +68,98 @@ private:
   uint64_t * h_primeOut, * d_primeOut;
   uint64_t numGuess;
   void allocate();
-  void fetch(BigSieve * sieve);
-  void cleanupMin();
+  void fetch(BigSieve & sieve);
+  void cleanupAll();
   void cleanupAllDevice();
 
 public:
   uint64_t * getPrimeOut();
   void printPrimes();
 
-  PrimeOutList(CudaSieve * sieve);
+  PrimeOutList(CudaSieve & sieve);
   ~PrimeOutList();
 };
 
 class PrimeList{
 
 private:
-  cudaEvent_t start, stop;
+  KernelTime timer;
   uint32_t * h_primeListLength, * d_histogram, * d_histogram_lg, * d_primeListLength;
   uint32_t hist_size_lg, piHighGuess, PL_Max, maxPrime, blocks;
   uint16_t threads;
   uint32_t * d_primeList;
 
-public:
-  uint32_t getBlocks(){return blocks;}
-  uint16_t getThreads(){return threads;}
   uint32_t * getPtr(){return d_primeList;}
   void sievePrimeList();
-  uint32_t getPrimeListLength();
   void allocate();
 
   PrimeList(uint32_t maxPrime);
-  ~PrimeList();
+public:
 
-  void displayTime();
-  void cleanUp();
+  ~PrimeList();
+  static uint32_t * getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLength, bool silent);
+
 };
 
 class SmallSieve{
 private:
-  cudaEvent_t start, stop;
-
-public:
-
-  SmallSieve(CudaSieve * sieve);
+  KernelTime timer;
+  float time_ms;
+  SmallSieve(){};
   ~SmallSieve(){};
-  void launch(KernelData & kernelData, CudaSieve * sieve);
+  void launch(CudaSieve & sieve);
   void displaySieveTime();
+public:
+  static void run(CudaSieve & sieve);
 };
 
 class BigSieve{
   friend class PrimeOutList;
+  friend class CudaSieve;
+  friend void host::displayAttributes(const BigSieve & bigsieve);
 
 private:
-  cudaEvent_t start, stop, start1, stop1, start2, stop2;
+  KernelTime timer;
   cudaStream_t stream[2];
   uint16_t log2bigSieveSpan;
   uint32_t blocksSm, blocksLg, primeListLength, bigSieveKB, bigSieveBits, sieveKB, * d_bigSieve, * d_primeList, * ptr32;
   uint64_t top, bottom, totIter, *ptr64;
-  bool silent;
+  bool silent, noMemcpy;
+  float time_ms;
 
   uint32_t * d_next;
   uint16_t * d_away;
 
-public:
+  BigSieve(CudaSieve & sieve);
+  ~BigSieve();
 
-  BigSieve(){}
-  BigSieve(CudaSieve * sieve);
-  ~BigSieve(){}
-
-  void setParameters(CudaSieve * sieve); // this is only necessary if a CudaSieve was not specified on declaration;
+  void setParameters(CudaSieve & sieve);
   void allocate();
   void fillNextMult();
 
-  void launchLoop(KernelData & kernelData);
-  void launchLoopCopy(KernelData & kernelData, CudaSieve * sieve);
-  void launchLoopPrimes(KernelData & kernelData, CudaSieve * sieve);
-  void displayCount(KernelData & kernelData);
+  void launchLoop();
+  void launchLoopCopy(CudaSieve & sieve);
+  void launchLoopPrimes(CudaSieve & sieve);
 
-  void cleanUp();
+public:
+  static void run(CudaSieve & sieve);
+
 };
 
 class KernelData{
   friend class BigSieve;
   friend class SmallSieve;
   friend class PrimeOutList;
+  friend class CudaSieve;
 private:
   static volatile uint64_t * h_count, * h_blocksComplete;
   static volatile uint64_t * d_count, * d_blocksComplete;
 public:
-  uint64_t getCount(){return * h_count;}
-  uint64_t getBlocks(){return * h_blocksComplete;}
+  static uint64_t getCount(){return * h_count;}
+  static uint64_t getBlocks(){return * h_blocksComplete;}
 
-  void displayProgress(CudaSieve * sieve);
-  void displayProgress(uint64_t value, uint64_t totIter);
+  static void displayProgress(CudaSieve & sieve);
+  static void displayProgress(uint64_t value, uint64_t totIter);
 
   static void allocate();
 
