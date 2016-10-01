@@ -20,7 +20,8 @@ Benchmarks
 <tr><td> 0 to 2<sup>50</sup></td><td> 0.745 ms</td><td> *  </td><td> 33 897 s </td><td> 33 483 379 603 407</td></tr>  
 <tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.132 ms</td><td> 34.8 ms</td><td> 0.137 s</td><td> 38 726 266</td></tr>  
 <tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.739 ms</td><td> 36.2 ms</td><td> 0.143 s</td><td> 30 984 665</td></tr>  
-<tr><td> 2<sup>58</sup> to 2<sup>58</sup> + 2<sup>30</sup></td><td> 11.1 ms</td><td> 91.4 ms</td><td> 0.193 s </td><td> 26 707 352</td></tr></table>
+<tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 20.9 ms</td><td> 130 ms</td><td> 0.242 s </td><td> 25 818 737</td></tr>
+<tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 121 ms</td><td> 313 ms</td><td> 0.518 s </td><td> 24 201 154</td></tr></table>
 <p>*Separate sieves for <2<sup>40</sup> and >=2<sup>40</sup></p>
 <br>
 
@@ -35,11 +36,9 @@ Benchmarks
 
 The output for each of these ranges has been verified against that of primesieve both in count and (for the ranges covering
 less than a span of 2<sup>32</sup>) in the actual primes generated.  Additionally, this code contains a way of generating a
- list of (32 bit) primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
+ list of sieving primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
   Generating the list of 189 961 801 primes from 32 to 4e9 takes just 99 ms.  This is about 7.5 GB of primes/second.  Primes
-  are also prepared to be printed in the same way, with most of the overhead coming from the (currently synchronous) CudaMemcpy
-  required.  For example, the kernel time for preparing an array of all the (26 707 352) primes from 2<sup>58</sup> to 2<sup>58</sup>+2<sup>30</sup> and getting this array to the host is 123 ms with the GTX 1080.  However, the device array is
-  filled in only 92 ms, essentially the same time for getting a count.<br><br>
+  are also prepared to be printed in the same way.  For example, the kernel time for preparing an array of all the (25 818 737) primes from 2<sup>60</sup> to 2<sup>60</sup>+2<sup>30</sup> and getting this array to the host is 157 ms with the GTX 1080.<br><br>
 
 Usability
 ---------
@@ -51,7 +50,7 @@ issue for older devices is the use of grids with x-dimensions larger than 65535 
 older than compute capability 3.0, and the source code here seems to work without problems on compute capability >=5.0 devices.
 
 This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
-for sieving up to 2<sup>64</sup>, which currently doesn't give the correct answer anyway (vide infra).  In any event, the fact that
+for sieving up to 2<sup>64</sup>.  The fact that
 large primes are handled in global memory, rather than on-chip, means that increasing the number of blocks working on the
 task of sieving these large primes does not increase the amount of memory used since the data set is not duplicated.
 
@@ -64,10 +63,8 @@ Known Issues
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1) The bottom of the sieving range must be a multiple of 2<sup>17</sup>.  This will be fixed in the near future<br>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(2) There are instances where the count is off by 1-4 on certain ranges where less than an entire sieving range is counted<br>
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(3) Only multiples of 2<sup>24</sup> are acceptable inputs for the top or bottom if above 2<sup>40</sup>.<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(4) Somewhere above 2<sup>58</sup>, the sieve starts crossing off actual primes due to something other than a race condition.<br>
 <br>
 
 State of the Project
 -------------------
-I am currently working on cleaning up the class structure of the host code as well as working out the kinks for sieving
-the ranges above 2<sup>58</sup> and cleaning up the horrible mess that is my debugging code.
+I am continuing verification tests on outputs of the sieve at various ranges as well as working out counting and printing ranges that include less than a full sieve segment.  Let me know if you have any requests for features, and I'll see what I can do.
