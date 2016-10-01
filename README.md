@@ -55,6 +55,33 @@ large primes are handled in global memory, rather than on-chip, means that incre
 task of sieving these large primes does not increase the amount of memory used since the data set is not duplicated.
 
 Support for printing primes has just been added, but this is only available above 2<sup>40</sup>.
+
+The provided binaries have been compiled for compute capability >6.1 devices (i.e. Pascal).  In the next few days, I'll provide binaries that support multiple architectures and older hardware.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for creating host or device arrays of primes as well as counting by linking the cudasieve.a binary (with nvcc).  For example:
+```
+#include <iostream>
+#include <stdint.h>
+#include <math.h>
+#include <cuda_runtime.h>
+#include "CUDASieve/cudasieve.hpp"
+
+int main()
+{
+  uint64_t bottom = pow(2,63);
+  uint64_t top = pow(2,63)+pow(2,30);
+  CudaSieve * sieve = new CudaSieve;
+  size_t len;
+
+  uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
+
+  for(uint32_t i = 0; i < len; i++)
+    std::cout << primes[i] << std::endl;
+
+  cudaFreeHost(primes);
+  return 0;
+}
+```
+Prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30</sup>.
+
 <br>
 
 Known Issues
