@@ -44,10 +44,7 @@ Usability
 ---------
 
 At this point, the code is barely more than a proof of principle, so I imagine that anyone who is interested in this can
-modify the makefile to their needs.  The include file names have not changed between CUDA 7.5 and 8.0, so this can be built without
-modifications to the source code (at least in linux) with CUDA 7.5 as well.  As far as I am aware, the only compatability
-issue for older devices is the use of grids with x-dimensions larger than 65535 blocks.  However, this is only for devices
-older than compute capability 3.0, and the source code here seems to work without problems on compute capability >=5.0 devices.
+modify the makefile to their needs (e.g. changing the CUDA_DIR variable and probably specifying fewer microarchitectures)  The include file names have not changed between CUDA 7.5 and 8.0, so this can be built without modifications to the source code (at least in linux) with CUDA 7.5 as well.  Windows support is currently being held up by my unwillingness to deal with the issue of Windows support.
 
 This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
 for sieving up to 2<sup>64</sup>.  The fact that
@@ -56,7 +53,7 @@ task of sieving these large primes does not increase the amount of memory used s
 
 Support for printing primes has just been added, but this is only available above 2<sup>40</sup>.
 
-The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for creating host or device arrays of primes as well as counting by linking the cudasieve.a binary (with nvcc).  For example:
+The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
 ```
 #include <iostream>
 #include <stdint.h>
