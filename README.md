@@ -38,7 +38,12 @@ The output for each of these ranges has been verified against that of primesieve
 less than a span of 2<sup>32</sup>) in the actual primes generated.  Additionally, this code contains a way of generating a
  list of sieving primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
   Generating the list of 189 961 800 primes from 38 to 4e9 takes just 89 ms.  This is about 8.3 GB of primes/second.  Primes
-  are also prepared to be printed in the same way.  For example, the kernel time for preparing an array of all the (25 818 737) primes from 2<sup>60</sup> to 2<sup>60</sup>+2<sup>30</sup> and getting this array to the host is 157 ms with the GTX 1080.<br><br>
+  are also prepared to be printed in the same way.  For example, the kernel time for preparing an array of all the (25 818 737) primes from 2<sup>60</sup> to 2<sup>60</sup>+2<sup>30</sup> and getting this array to the host is 157 ms with the GTX 1080.
+  
+  This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
+for sieving up to 2<sup>64</sup>.  The fact that
+large primes are handled in global memory, rather than on-chip, means that increasing the number of blocks working on the
+task of sieving these large primes does not increase the amount of memory used since the data set is not duplicated.<br><br>
 
 Usability
 ---------
@@ -46,38 +51,51 @@ Usability
 At this point, the code is barely more than a proof of principle, so I imagine that anyone who is interested in this can
 modify the makefile to their needs (e.g. changing the CUDA_DIR variable and probably specifying fewer microarchitectures)  The include file names have not changed between CUDA 7.5 and 8.0, so this can be built without modifications to the source code (at least in linux) with CUDA 7.5 as well.  Windows support is currently being held up by my unwillingness to deal with the issue of Windows support.
 
-This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
-for sieving up to 2<sup>64</sup>.  The fact that
-large primes are handled in global memory, rather than on-chip, means that increasing the number of blocks working on the
-task of sieving these large primes does not increase the amount of memory used since the data set is not duplicated.
-
 Support for printing primes has just been added, but this is only available above 2<sup>40</sup>.
 
 The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
 ```
+/* main.cu */
+
 #include <iostream>
 #include <stdint.h>
-#include <math.h>
-#include <cuda_runtime.h>
+#include <math.h> // pow()
 #include "CUDASieve/cudasieve.hpp"
 
 int main()
 {
-  uint64_t bottom = pow(2,63);
-  uint64_t top = pow(2,63)+pow(2,30);
-  CudaSieve * sieve = new CudaSieve;
-  size_t len;
+uint64_t bottom = pow(2,63);
+uint64_t top = pow(2,63)+pow(2,30);
+CudaSieve * sieve = new CudaSieve;
+size_t len;
 
-  uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
+uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
 
-  for(uint32_t i = 0; i < len; i++)
-    std::cout << primes[i] << std::endl;
+for(uint32_t i = 0; i < len; i++)
+  std::cout << primes[i] << std::endl;
 
-  cudaFreeHost(primes);
-  return 0;
+sieve->~CudaSieve();
+return 0;
 }
 ```
-Prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30</sup>.
+placed in the CUDASieve directory compiles with the command 
+```
+nvcc -I include cudasieve.a -std=c++11 -arch=compute_30 main.cu
+```
+and prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30</sup>.  The array is deallocated with the explicit destructor call.  Delete[]ing a CudaSieve will cause a fault due to the use of memory allocated by the CUDA API.  The destructor call safely handles deallocation without any need to #include a cuda header, which is the primary motivation for using non-static member functions.  If you do decide to use the CUDA API to deallocate an array (I cannot think of any reason for doing this), remember to set the pointer to NULL so that an implicit CudaSieve destructor call does not try to deallocate again.  Note that multiple arrays can be generated serially with a single CudaSieve object, but each new call deallocates the previous array, so a separate CudaSieve object must exist for each concurrent array that exists.
+
+```
+       /* Returns count from 0 to top */
+  uint64_t countPrimes(uint64_t top);
+       /* Returns count from bottom to top, caveats mentioned below apply */
+  uint64_t countPrimes(uint64_t bottom, uint64_t top);
+
+       /********* Must be used above 2**40 *********/
+       /* Returns pointer to a page-locked array of primes on the host of length size*/
+  uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
+       /* Returns pointer to an array of primes on the device of length size */
+  uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+```
 
 <br>
 
