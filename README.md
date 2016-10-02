@@ -56,7 +56,7 @@ task of sieving these large primes does not increase the amount of memory used s
 
 Support for printing primes has just been added, but this is only available above 2<sup>40</sup>.
 
-The provided binaries have been compiled for compute capability >6.1 devices (i.e. Pascal).  In the next few days, I'll provide binaries that support multiple architectures and older hardware.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for creating host or device arrays of primes as well as counting by linking the cudasieve.a binary (with nvcc).  For example:
+The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for creating host or device arrays of primes as well as counting by linking the cudasieve.a binary (with nvcc).  For example:
 ```
 #include <iostream>
 #include <stdint.h>
