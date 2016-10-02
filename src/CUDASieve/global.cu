@@ -375,6 +375,30 @@ __global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve,
   __syncthreads();
 }
 
+
+__global__ void device::bigSieveSmCpy(uint32_t * d_primeList, uint32_t * bigSieve,
+   uint64_t bottom, uint32_t sieveKB, uint32_t primeListLength)
+{
+  uint32_t sieveBits = sieveKB*8192;
+  uint32_t sieveWords = sieveBits/32;
+  extern __shared__ uint32_t s_sieve[];
+  uint64_t bstart = bottom + 2*blockIdx.x*sieveBits;
+
+  float pstop = sqrtf(bstart + 2*sieveBits);
+  unsigned int piHighGuess = (pstop/log(pstop))*(1+1.2762/log(pstop));
+  primeListLength = min((unsigned int) primeListLength, piHighGuess);
+
+  device::sieveInit(s_sieve, sieveWords);
+  __syncthreads();
+  device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
+  __syncthreads();
+  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
+  else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
+  __syncthreads();
+  device::makeBigSieve(bigSieve, s_sieve, sieveWords);
+  __syncthreads();
+}
+
 /*
 This kernel utilizes global memory as well as the impelementation of the bucket
 algorithm.  Most of the time, it just decrements d_away, but when more work is

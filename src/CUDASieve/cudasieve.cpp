@@ -97,9 +97,9 @@ void CudaSieve::launchCtl()
   setKernelParam();
   d_primeList = PrimeList::getSievingPrimes(sqrt(top), primeListLength, flags[30]);
 
-  if(!flags[30])  host::displayAttributes(*this);
-  if(!flags[2])   SmallSieve::run(*this);
-  if(flags[1])    BigSieve::run(*this);
+  if(!flags[30] && !flags[0])   host::displayAttributes(*this);
+  if(!flags[2] && !flags[0])    SmallSieve::run(*this);
+  if(flags[1] || flags[0])      BigSieve::run(*this);
 
   count = KernelData::getCount();
 }

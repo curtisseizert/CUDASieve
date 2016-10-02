@@ -93,6 +93,7 @@ on chaning parameters of the sieve (size of words, etc.) without having to do th
 part by hand.
 */
 
+
 __device__ void device::sieveSmallPrimes(uint32_t * s_sieve, uint32_t sieveWords, uint64_t bstart)
 {
   #pragma unroll 1
@@ -111,6 +112,7 @@ __device__ void device::sieveSmallPrimes(uint32_t * s_sieve, uint32_t sieveWords
     s_sieve[i] |= p37[j%37];
   }
 }
+
 /*
           ######################################################
           ###### Specialized sieve for making primelist ########
@@ -155,7 +157,7 @@ __device__ void device::sieveMedPrimes(uint32_t * s_sieve, uint32_t * d_primeLis
     uint32_t off = p - bstart % p;
     if(off%2==0) off += p;
     off = off >> 1; // convert offset to align with half sieve
-    for(; off < sieveBits; off += p) atomicOr(&s_sieve[off >> 5], (1u << (off & 31)));
+    for(; off < sieveBits; off += p) atomicOr(&s_sieve[off >> 5], (1u << (off & 31))); // this loop takes ~75% of the kernel time
   }
 }
 

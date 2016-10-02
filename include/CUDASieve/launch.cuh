@@ -59,6 +59,7 @@ public:
 
 class PrimeOutList{
   friend class BigSieve;
+  friend class SmallSieve;
   friend class KernelData;
 
 private:
@@ -69,6 +70,7 @@ private:
   uint64_t numGuess;
   void allocate();
   void fetch(BigSieve & sieve);
+  void fetch();
   void cleanupAll();
   void cleanupAllDevice();
 
@@ -107,7 +109,8 @@ private:
   float time_ms;
   SmallSieve(){};
   ~SmallSieve(){};
-  void launch(CudaSieve & sieve);
+  void count(CudaSieve & sieve);
+  void copy(CudaSieve & sieve);
   void displaySieveTime();
 public:
   static void run(CudaSieve & sieve);
@@ -140,6 +143,7 @@ private:
   void launchLoop();
   void launchLoopCopy(CudaSieve & sieve);
   void launchLoopPrimes(CudaSieve & sieve);
+  void launchLoopPrimesSmall(CudaSieve & sieve);
 
 public:
   static void run(CudaSieve & sieve);

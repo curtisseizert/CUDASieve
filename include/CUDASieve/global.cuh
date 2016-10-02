@@ -28,6 +28,7 @@ namespace device
   __global__ void smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t bottom, uint32_t sieveBits, uint32_t primeListLength, uint64_t top, volatile uint64_t * d_count, volatile uint64_t * d_blocksComplete);
   __global__ void smallSieveCopy(uint32_t * d_primeList, uint64_t * d_count, uint64_t bottom, uint32_t sieveBits, uint32_t primeListLength, uint32_t * sieveOut);
   __global__ void getNextMult30(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away, uint32_t primeListLength, uint64_t bottom, uint32_t bigSieveBits, uint8_t log2bigSieveSpan);
+  __global__ void bigSieveSmCpy(uint32_t * d_primeList, uint32_t * bigSieve, uint64_t bottom, uint32_t sieveKB, uint32_t primeListLength);
   __global__ void bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve, uint64_t bottom, uint32_t sieveKB);
   __global__ void bigSieveLg(uint32_t * d_primeList, uint32_t * d_next, uint16_t * d_away, uint32_t * bigSieve, uint32_t bigSieveBits, uint32_t primeListLength, uint8_t log2bigSieveSpan);
   __global__ void bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, volatile uint64_t * d_count);

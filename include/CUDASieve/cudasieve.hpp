@@ -69,7 +69,6 @@ private:
 
   uint64_t getBottom(){return bottom;}
   uint64_t getTop(){return top;}
-  bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
   void makePrimeList(uint32_t maxPrime);
 
@@ -93,6 +92,8 @@ public:
 
   CudaSieve();
   ~CudaSieve();
+
+  bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
   void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
   uint64_t countPrimes(uint64_t top);

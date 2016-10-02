@@ -7,7 +7,7 @@ GPU_CODE = sm_30,sm_32,sm_35,sm_37,sm_50,sm_52,sm_53,sm_60,sm_61,sm_62
 NVCC = $(CUDA_DIR)/bin/nvcc
 CC = clang
 # Flags for the host compiler
-CCFLAGS = -c -O3 -std=c++11
+CCFLAGS = -c -O3 -std=c++11 -g
 
 # Flags for nvcc
 # ptxas-options=-dlcm=cg (vs. default of ca) is about a 2% performance gain
