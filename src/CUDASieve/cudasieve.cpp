@@ -43,18 +43,22 @@ void CudaSieve::setBottom(uint64_t bottom){this -> bottom = bottom;}
 void CudaSieve::setSieveKB(uint32_t sieveKB){this -> sieveKB = sieveKB;}
 void CudaSieve::setBigSieveKB(uint32_t bigSieveKB){this -> bigSieveKB = bigSieveKB;}
 void CudaSieve::setGpuNum(uint16_t gpuNum){this -> gpuNum = gpuNum;}
+void CudaSieve::setMaxPrime(uint32_t maxPrime){this -> maxPrime_ = maxPrime;}
 void CudaSieve::allocateSieveOut(uint64_t size){sieveOut = new uint32_t[size/sizeof(uint32_t)];}
 
 void CudaSieve::setKernelParam()
 {
-  if(top > 1ull << 63 && !flags[18]) bigSieveKB = 1u << 12;
-  if(top < 1u << 23) sieveKB = 2;
+  if(top > 1ull << 63 && !flags[18])  bigSieveKB = 1u << 12;
+  if(top < 1u << 23)                  sieveKB = 2;
+  if(maxPrime_ == 0)                  maxPrime_ = (uint32_t) sqrt(top);
+
   sieveBits = sieveKB << 13;
   bigSieveBits = bigSieveKB << 13;
   uint64_t smTop = std::min((unsigned long long) top, 1ull << 40);
   kernelBottom = bottom - bottom % (2 * sieveBits);
   totBlocks = (smTop - kernelBottom) / (2 *  sieveBits);
   smKernelTop = kernelBottom + (totBlocks * sieveBits * 2);
+
   cudaSetDevice(gpuNum);
   checkRange();
   setFlags();
@@ -95,7 +99,7 @@ double CudaSieve::elapsedTime()
 void CudaSieve::launchCtl()
 {
   setKernelParam();
-  d_primeList = PrimeList::getSievingPrimes(sqrt(top), primeListLength, flags[30]);
+  d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
 
   if(!flags[30] && !flags[0])   host::displayAttributes(*this);
   if(!flags[2] && !flags[0])    SmallSieve::run(*this);
@@ -119,6 +123,7 @@ uint64_t CudaSieve::countPrimes(uint64_t top)
   this->top = top;
   flags[30] = 1;
   launchCtl();
+  maxPrime_ = 0;
   return count;
 }
 
@@ -129,6 +134,7 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top)
   this->top = top;
   flags[30] = 1;
   launchCtl();
+  maxPrime_ = 0;
   return count;
 }
 
@@ -145,6 +151,7 @@ uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & size
   size = count;
   safeCudaFree(d_primeOut);
   safeCudaFree(d_primeList);
+  maxPrime_ = 0;
   return h_primeOut;
 }
 
@@ -162,5 +169,30 @@ uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & si
   size = count;
   safeCudaFreeHost(h_primeOut);
   safeCudaFree(d_primeList);
+  maxPrime_ = 0;
   return d_primeOut;
+}
+
+uint64_t CudaSieve::countPartialSieve(uint64_t top, uint32_t maxPrime)
+{
+  maxPrime_ = maxPrime;
+  return countPrimes(top);
+}
+
+uint64_t CudaSieve::countPartialSieve(uint64_t bottom, uint64_t top, uint32_t maxPrime)
+{
+  maxPrime_ = maxPrime;
+  return countPrimes(bottom, top);
+}
+
+uint64_t * CudaSieve::getHostPrimesPartial(uint64_t bottom, uint64_t top, size_t & size, uint32_t maxPrime)
+{
+  maxPrime_ = maxPrime;
+  return getHostPrimes(bottom, top, size);
+}
+
+uint64_t * CudaSieve::getDevicePrimesPartial(uint64_t bottom, uint64_t top, size_t & size, uint32_t maxPrime)
+{
+  maxPrime_ = maxPrime;
+  return getDevicePrimes(bottom, top, size);
 }

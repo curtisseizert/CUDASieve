@@ -49,7 +49,10 @@ PrimeOutList::PrimeOutList(CudaSieve & sieve)
 
   hist_size_lg = blocks/512 + 1;
   numGuess = (uint64_t) (sieve.top/log(sieve.top))*(1+1.2762/log(sieve.top)) -
-    ((sieve.bottom/log(sieve.bottom))*(1+1.2762/log(sieve.bottom)));
+  ((sieve.bottom/log(sieve.bottom))*(1+1.2762/log(sieve.bottom)));
+
+  //if(sieve.maxPrime_ < sqrt(sieve.top)) numGuess *= (log(sieve.top)+1)/(log(sieve.maxPrime_*sieve.maxPrime_)-1);
+
   allocate();
 }
 
@@ -252,6 +255,7 @@ void BigSieve::allocate()
     {std::cerr << "PrimeList: CUDA memory allocation error: d_next" << std::endl; exit(1);}
   if(cudaMalloc(&d_away, primeListLength*sizeof(uint16_t)))
     {std::cerr << "PrimeList: CUDA memory allocation error: d_away" << std::endl; exit(1);}
+
   if(cudaMalloc(&d_bigSieve, bigSieveKB*256*sizeof(uint32_t)))
     {std::cerr << "PrimeList: CUDA memory allocation error: d_bigSieve" << std::endl; exit(1);}
 
@@ -309,7 +313,7 @@ void BigSieve::launchLoopCopy(CudaSieve & sieve)
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB);
-    device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
+    if(primeListLength > 65536) device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
       (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
     cudaDeviceSynchronize();
@@ -375,12 +379,12 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
   }
   // Post sieve stop timer, memcpy, print, pass pointers
   cudaDeviceSynchronize();
-  //if(!noMemcpy) cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
+  if(!noMemcpy) cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   timer.stop();
   if(!silent) {
     KernelData::displayProgress(totIter, totIter);
     std::cout<<std::endl;
-    //newlist.printPrimes();
+    newlist.printPrimes();
   }
   sieve.h_primeOut = newlist.h_primeOut;
   sieve.d_primeOut = newlist.d_primeOut;

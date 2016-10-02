@@ -56,7 +56,7 @@ private:
   bool flags[32];
   uint64_t bottom = 0, top = (1u << 30), kernelBottom, smKernelTop, totBlocks, count = 0, * h_primeOut, * d_primeOut;
   uint16_t gpuNum = 0;
-  uint32_t bigSieveBits, bigSieveKB = 1024, sieveBits, sieveKB = 16, primeListLength, * d_primeList;
+  uint32_t bigSieveBits, bigSieveKB = 1024, sieveBits, sieveKB = 16, primeListLength, * d_primeList, maxPrime_ = 0;
   clock_t start_time;
 
   void setTop(uint64_t top);
@@ -64,6 +64,7 @@ private:
   void setSieveKB(uint32_t sieveKB);
   void setBigSieveKB(uint32_t bigSieveKB);
   void setGpuNum(uint16_t gpuNum);
+  void setMaxPrime(uint32_t maxPrime);
   void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
   void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
 
@@ -84,6 +85,7 @@ private:
 
   void run();
   void launchCtl();
+  void launchCtl(uint32_t maxPrime);
 
   void reset();
 
@@ -98,9 +100,13 @@ public:
   void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
   uint64_t countPrimes(uint64_t top);
   uint64_t countPrimes(uint64_t bottom, uint64_t top);
+  uint64_t countPartialSieve(uint64_t top, uint32_t maxPrime);
+  uint64_t countPartialSieve(uint64_t bottom, uint64_t top, uint32_t maxPrime);
 
   uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
   uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+  uint64_t * getHostPrimesPartial(uint64_t bottom, uint64_t top, size_t & size, uint32_t maxPrime);
+  uint64_t * getDevicePrimesPartial(uint64_t bottom, uint64_t top, size_t & size, uint32_t maxPrime);
 
   double elapsedTime();
 };

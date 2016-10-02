@@ -37,7 +37,7 @@ uint64_t host::echo(char * argv) // for getting values bigger than the 32 bits t
 
 void host::displayAttributes(CudaSieve & sieve)
 {
-  if(!sieve.flags[30]) std::cout << "\n" << sieve.primeListLength << " sieving primes in (37, " << (unsigned long) sqrt(sieve.top) << "]" << std::endl;
+  if(!sieve.flags[30]) std::cout << "\n" << sieve.primeListLength << " sieving primes in (37, " << sieve.maxPrime_ << "]" << std::endl;
 
   if(!sieve.flags[2] && !sieve.flags[30]){
     std::cout << "Small Sieve parameters" << std::endl;
@@ -80,13 +80,14 @@ void host::parseOptions(int argc, char* argv[], CudaSieve * sieve)
       sieve->setFlagOn(17);
 
     if(i + 1 <= argc){
-      if(arg == "-t") sieve->setTop(echo(argv[i+1]));
-      if(arg == "-b") sieve->setBottom(echo(argv[i+1]));
-      if(arg == "-bs"){
-        sieve->setBigSieveKB(echo(argv[i+1]));
-        sieve->setFlagOn(18);}
-      if(arg == "-g") sieve->setGpuNum(atoi(argv[i+1]));
-      if(arg == "-sievekb") sieve->setSieveKB(atoi(argv[i+1]));
+      if(arg == "-t")           sieve->setTop(echo(argv[i+1]));
+      if(arg == "-b")           sieve->setBottom(echo(argv[i+1]));
+      if(arg == "-bs"){         sieve->setBigSieveKB(echo(argv[i+1]));
+                                sieve->setFlagOn(18);}
+      if(arg == "-g")           sieve->setGpuNum(atoi(argv[i+1]));
+      if(arg == "-sievekb")     sieve->setSieveKB(atoi(argv[i+1]));
+      if(arg == "-partial")     sieve->setMaxPrime(atoi(argv[i+1]));
+
     }
   }
 }
