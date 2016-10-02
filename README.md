@@ -51,7 +51,7 @@ Usability
 At this point, the code is barely more than a proof of principle, so I imagine that anyone who is interested in this can
 modify the makefile to their needs (e.g. changing the CUDA_DIR variable and probably specifying fewer microarchitectures)  The include file names have not changed between CUDA 7.5 and 8.0, so this can be built without modifications to the source code (at least in linux) with CUDA 7.5 as well.  Windows support is currently being held up by my unwillingness to deal with the issue of Windows support.
 
-Support for printing primes has just been added, but this is only available above 2<sup>40</sup>.
+Support for printing primes has just been added.
 
 The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
 ```
@@ -90,7 +90,7 @@ and prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30
        /* Returns count from bottom to top, caveats mentioned below apply */
   uint64_t countPrimes(uint64_t bottom, uint64_t top);
 
-       /********* Must be used above 2**40 *********/
+       /********* range must be a multiple of 2^24 *********/
        /* Returns pointer to a page-locked array of primes on the host of length size*/
   uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
        /* Returns pointer to an array of primes on the device of length size */
