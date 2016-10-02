@@ -32,8 +32,7 @@ The naming convention for sieve sizes:
   #define THREADS_PER_BLOCK_LG 256
 #endif
 
-class KernelData;
-
+inline void safeFree(bool * array) {if(array != NULL){free(array); array = NULL;}}
 inline void safeFree(uint32_t * array) {if(array != NULL){free(array); array = NULL;}}
 inline void safeFree(uint64_t * array) {if(array != NULL){free(array); array = NULL;}}
 inline void safeCudaFree(uint16_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
@@ -51,6 +50,7 @@ class CudaSieve {
   friend class PrimeOutList;
   friend class Debug;
   friend void host::displayAttributes(CudaSieve & sieve);
+  friend void host::parseOptions(int argc, char* argv[], CudaSieve * sieve);
 
 private:
   bool flags[32];
@@ -58,6 +58,20 @@ private:
   uint16_t gpuNum = 0;
   uint32_t bigSieveBits, bigSieveKB = 1024, sieveBits, sieveKB = 16, primeListLength, * d_primeList;
   clock_t start_time;
+
+  void setTop(uint64_t top);
+  void setBottom(uint64_t bottom);
+  void setSieveKB(uint32_t sieveKB);
+  void setBigSieveKB(uint32_t bigSieveKB);
+  void setGpuNum(uint16_t gpuNum);
+  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
+  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
+
+  uint64_t getBottom(){return bottom;}
+  uint64_t getTop(){return top;}
+  bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
+
+  void makePrimeList(uint32_t maxPrime);
 
   void setFlags();
   void setKernelParam();
@@ -78,30 +92,14 @@ public:
   uint32_t * sieveOut;
 
   CudaSieve();
-  ~CudaSieve(){};
+  ~CudaSieve();
 
-  void setTop(uint64_t top);
-  void setBottom(uint64_t bottom);
-  void setSieveKB(uint32_t sieveKB);
-  void setBigSieveKB(uint32_t bigSieveKB);
-  void setGpuNum(uint16_t gpuNum);
-  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
-  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
-
-  uint64_t getBottom(){return bottom;}
-  uint64_t getTop(){return top;}
-  bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
-
-  void makePrimeList(uint32_t maxPrime);
-
-  void CLIPrimes();
+  void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
   uint64_t countPrimes(uint64_t top);
   uint64_t countPrimes(uint64_t bottom, uint64_t top);
 
   uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
   uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
-
-  void printSieveOut();
 
   double elapsedTime();
 };

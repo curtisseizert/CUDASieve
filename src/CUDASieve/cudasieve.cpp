@@ -14,6 +14,21 @@ Curtis Seizert - cseizert@gmail.com
 #include <stdio.h>
 #include <math.h>
 
+CudaSieve::CudaSieve()
+{
+  start_time = clock();
+  cudaSetDeviceFlags(cudaDeviceMapHost);
+  KernelData::allocate();
+}
+
+CudaSieve::~CudaSieve()
+{
+  safeCudaFreeHost(h_primeOut);
+  safeCudaFree(d_primeOut);
+  safeCudaFree(d_primeList);
+  safeFree(flags);
+}
+
 void CudaSieve::reset()
 {
   safeCudaFreeHost(h_primeOut);
@@ -21,14 +36,6 @@ void CudaSieve::reset()
   safeCudaFree(d_primeList);
   *KernelData::h_count = 0;
   start_time = clock();
-}
-
-CudaSieve::CudaSieve()
-{
-  KernelData kerneldata;
-  start_time = clock();
-  cudaSetDeviceFlags(cudaDeviceMapHost);
-  kerneldata.allocate();
 }
 
 void CudaSieve::setTop(uint64_t top){this -> top = top;}
