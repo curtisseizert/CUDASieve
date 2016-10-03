@@ -55,7 +55,8 @@ modify the makefile to their needs (e.g. changing the CUDA_DIR variable and prob
 Support for printing primes has just been added.
 
 The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
-```
+
+```C++
 /* main.cu */
 
 #include <iostream>
@@ -65,37 +66,42 @@ The provided binaries have been compiled for x86_64 linux with the compute capab
 
 int main()
 {
-uint64_t bottom = pow(2,63);
-uint64_t top = pow(2,63)+pow(2,30);
-CudaSieve * sieve = new CudaSieve;
-size_t len;
+    uint64_t bottom = pow(2,63);
+    uint64_t top = pow(2,63)+pow(2,30);
+    CudaSieve * sieve = new CudaSieve;
+    size_t len;
 
-uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
+    uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
 
-for(uint32_t i = 0; i < len; i++)
-  std::cout << primes[i] << std::endl;
+    for(uint32_t i = 0; i < len; i++)
+        std::cout << primes[i] << std::endl;
 
-sieve->~CudaSieve();
-return 0;
+    sieve->~CudaSieve();
+    return 0;
 }
 ```
+
 placed in the CUDASieve directory compiles with the command 
-```
+
+```bash
 nvcc -I include cudasieve.a -std=c++11 -arch=compute_30 main.cu
 ```
+
 and prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30</sup>.  The array is deallocated with the explicit destructor call.  Delete[]ing a CudaSieve will cause a fault due to the use of memory allocated by the CUDA API.  The destructor call safely handles deallocation without any need to #include a cuda header, which is the primary motivation for using non-static member functions.  If you do decide to use the CUDA API to deallocate an array (I cannot think of any reason for doing this), remember to set the pointer to NULL so that an implicit CudaSieve destructor call does not try to deallocate again.  Note that multiple arrays can be generated serially with a single CudaSieve object, but each new call deallocates the previous array, so a separate CudaSieve object must exist for each concurrent array that exists.
 
-```
-       /* Returns count from 0 to top */
-  uint64_t countPrimes(uint64_t top);
-       /* Returns count from bottom to top, caveats mentioned below apply */
-  uint64_t countPrimes(uint64_t bottom, uint64_t top);
+```C++
+/* Returns count from 0 to top */
+uint64_t countPrimes(uint64_t top);
 
-       /********* range must be a multiple of 2^24 *********/
-       /* Returns pointer to a page-locked array of primes on the host of length size*/
-  uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
-       /* Returns pointer to an array of primes on the device of length size */
-  uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+/* Returns count from bottom to top, caveats mentioned below apply */
+uint64_t countPrimes(uint64_t bottom, uint64_t top);
+
+/********* range must be a multiple of 2^24 *********/
+/* Returns pointer to a page-locked array of primes on the host of length size*/
+uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
+
+/* Returns pointer to an array of primes on the device of length size */
+uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
 ```
 
 <br>
