@@ -178,17 +178,27 @@ void SmallSieve::run(CudaSieve & sieve)
 {
   SmallSieve smallsieve;
 
-  if(!sieve.flags[0])   smallsieve.count(sieve);
-  if(!sieve.flags[30])  smallsieve.timer.displayTime();
+  smallsieve.createStreams();
+  if(!sieve.flags[0])                   smallsieve.count(sieve);
+  if(!sieve.flags[30])                  smallsieve.timer.displayTime();
+}
+
+void SmallSieve::createStreams() // this takes about 0.025 ms
+{
+  cudaStreamCreate(&stream[0]);
+  cudaStreamCreate(&stream[1]);
+  cudaStreamCreate(&stream[2]);
 }
 
 void SmallSieve::count(CudaSieve & sieve)
 {
   timer.start();
-  device::smallSieve<<<sieve.totBlocks, THREADS_PER_BLOCK, (sieve.sieveKB << 10)>>>
+  device::smallSieve<<<sieve.totBlocks, THREADS_PER_BLOCK, (sieve.sieveKB << 10), stream[0]>>>
     (sieve.d_primeList, KernelData::d_count, sieve.kernelBottom, sieve.sieveBits, sieve.primeListLength, KernelData::d_blocksComplete);
-  if(sieve.isFlag(4)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK>>>
-    (sieve.d_primeList, sieve.smKernelTop, sieve.sieveBits, sieve.primeListLength, sieve.top, KernelData::d_count, KernelData::d_blocksComplete);
+  if(sieve.isFlag(4)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK, 0, stream[1]>>>
+    (sieve.d_primeList, sieve.smKernelTop, sieve.sieveBits, sieve.primeListLength, sieve.top, KernelData::d_count, KernelData::d_blocksComplete, 1);
+  if(sieve.isFlag(5)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK, 0, stream[2]>>>
+    (sieve.d_primeList, sieve.kernelBottom, sieve.sieveBits, sieve.primeListLength, sieve.bottom-1, KernelData::d_count, KernelData::d_blocksComplete, 0);
   KernelData::displayProgress(sieve);
   cudaDeviceSynchronize();
   timer.stop();
@@ -236,6 +246,7 @@ void BigSieve::setParameters(CudaSieve & sieve)
   this -> top = sieve.top;
   this -> silent = sieve.isFlag(30);
   this -> noMemcpy = sieve.isFlag(20);
+  this -> noPrint = sieve.isFlag(29);
 
   // Calculate BigSieve specific parameters
   blocksSm = bigSieveKB/sieveKB;
@@ -282,7 +293,7 @@ void BigSieve::launchLoop()
     cudaDeviceSynchronize();
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
-      (d_primeList, d_bigSieve, bottom, sieveKB);
+      (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
     device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
       (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
@@ -312,7 +323,7 @@ void BigSieve::launchLoopCopy(CudaSieve & sieve)
   for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
-      (d_primeList, d_bigSieve, bottom, sieveKB);
+      (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
     if(primeListLength > 65536) device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
       (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
@@ -337,7 +348,7 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
   for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
-      (d_primeList, d_bigSieve, bottom, sieveKB);
+      (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
     device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
       (d_primeList, d_next, d_away, d_bigSieve,  bigSieveBits, primeListLength, log2bigSieveSpan);
 
@@ -351,11 +362,10 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
   cudaDeviceSynchronize();
   if(!noMemcpy) cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   timer.stop();
-  if(!silent) {
-    KernelData::displayProgress(totIter, totIter);
-    std::cout<<std::endl;
-    newlist.printPrimes();
-  }
+  if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
+
+  if(!noPrint) newlist.printPrimes();
+
   sieve.h_primeOut = newlist.h_primeOut;
   sieve.d_primeOut = newlist.d_primeOut;
 }
@@ -368,7 +378,7 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
 
   for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
 
-    device::bigSieveSmCpy<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
+    device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB, primeListLength);
 
     cudaDeviceSynchronize();
@@ -381,11 +391,10 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
   cudaDeviceSynchronize();
   if(!noMemcpy) cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   timer.stop();
-  if(!silent) {
-    KernelData::displayProgress(totIter, totIter);
-    std::cout<<std::endl;
-    newlist.printPrimes();
-  }
+  if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
+
+  if(!noPrint) newlist.printPrimes();
+
   sieve.h_primeOut = newlist.h_primeOut;
   sieve.d_primeOut = newlist.d_primeOut;
 }

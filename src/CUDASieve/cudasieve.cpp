@@ -55,13 +55,14 @@ void CudaSieve::setKernelParam()
   sieveBits = sieveKB << 13;
   bigSieveBits = bigSieveKB << 13;
   uint64_t smTop = std::min((unsigned long long) top, 1ull << 40);
-  kernelBottom = bottom - bottom % (2 * sieveBits);
+  kernelBottom = bottom - bottom%(2*sieveBits);
   totBlocks = (smTop - kernelBottom) / (2 *  sieveBits);
   smKernelTop = kernelBottom + (totBlocks * sieveBits * 2);
 
   cudaSetDevice(gpuNum);
   checkRange();
   setFlags();
+  std::cout << kernelBottom << std::endl;
 }
 
 void CudaSieve::checkRange()
@@ -72,8 +73,8 @@ void CudaSieve::checkRange()
     {std::cerr << "CUDASieve Error: the top of the range must be above 128." << std::endl; exit(1);}
   if((unsigned long long)top > 18446744056529682432ull) // 2^64-2^35
     {std::cerr << "CUDASieve Error: top above supported range (max is 2^64-2^35)." << std::endl; exit(1);}
-  if((bottom < 1ull << 40) && (bottom %(sieveBits*2) !=0))
-    {std::cerr << "CUDASieve Error: bottom must be a multiple of sieve size." << std::endl; exit(1);}
+  //if((bottom < 1ull << 40) && (bottom %(sieveBits*2) !=0))
+  //  {std::cerr << "CUDASieve Error: bottom must be a multiple of sieve size." << std::endl; exit(1);}
   if((bottom > 1ull << 40) && ((top-bottom)%(bigSieveBits*2) != 0))
     {std::cerr << "CUDASieve Error: above 2**40 range must be a multiple of sieve size." << std::endl; exit(1);}
 }
@@ -84,6 +85,7 @@ void CudaSieve::setFlags()
   if(bottom >= (1ull << 40)) flags[2] = 1;
   if(kernelBottom != bottom) flags[3] = 1;
   if(std::min((unsigned long long) top, 1ull << 40) != smKernelTop) flags[4] = 1;
+  if((bottom %(sieveBits*2) !=0)) flags[5] = 1;
 }
 
 void CudaSieve::displayRange()
@@ -114,7 +116,7 @@ void CudaSieve::CLIPrimes()
 
   launchCtl();
 
-  if(flags[30])   std::cout << count << std::endl;
+  if(flags[30] && !flags[0])   std::cout << count << std::endl;
 }
 
 uint64_t CudaSieve::countPrimes(uint64_t top)
@@ -143,6 +145,7 @@ uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & size
   reset();
 
   flags[0] = 1;
+  flags[29] = 1;
   flags[30] = 1;
   this->bottom = bottom;
   this->top = top;
@@ -160,6 +163,7 @@ uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & si
   reset();
 
   flags[0] = 1;
+  flags[29] = 1;
   flags[30] = 1;
   flags[20] = 1;
   this->bottom = bottom;

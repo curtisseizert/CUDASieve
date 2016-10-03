@@ -105,6 +105,7 @@ public:
 
 class SmallSieve{
 private:
+  cudaStream_t stream[3];
   KernelTime timer;
   float time_ms;
   SmallSieve(){};
@@ -112,6 +113,7 @@ private:
   void count(CudaSieve & sieve);
   void copy(CudaSieve & sieve);
   void displaySieveTime();
+  void createStreams();
 public:
   static void run(CudaSieve & sieve);
 };
@@ -127,7 +129,7 @@ private:
   uint16_t log2bigSieveSpan;
   uint32_t blocksSm, blocksLg, primeListLength, bigSieveKB, bigSieveBits, sieveKB, * d_bigSieve, * d_primeList, * ptr32;
   uint64_t top, bottom, totIter, *ptr64;
-  bool silent, noMemcpy;
+  bool silent, noMemcpy, noPrint;
   float time_ms;
 
   uint32_t * d_next;

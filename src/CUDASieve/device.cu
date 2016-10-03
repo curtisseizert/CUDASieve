@@ -2,8 +2,8 @@
 
 CUDASieveDevice.cu
 
-Contains the __device__ functions and __constant__s for CUDASieve 1.0
-by Curtis Seizert - cseizert@gmail.com
+Contains the __device__ functions and __constant__s for CUDASieve
+by Curtis Seizert <cseizert@gmail.com>
 
 */
 
@@ -25,58 +25,49 @@ In any event, the profiler says this is not a big deal.
 
 */
 
-__constant__ uint32_t p3[3] = {2454267026ul, 613566756ul, 1227133513ul};
-__constant__ uint32_t p5[5] = {138547332ul, 1108378657ul, 277094664ul, 2216757314ul,
-                              554189328ul};
-__constant__ uint32_t p7[7] = {2164392968ul, 135274560ul, 1082196484ul, 67637280ul,
-                              541098242ul, 33818640ul, 270549121ul};
-__constant__ uint32_t p11[11] = {134283296ul, 268566592ul, 537133184ul, 1074266368ul,
-                                2148532736ul, 2098176ul, 4196353ul, 8392706ul, 16785412ul,
-                                33570824ul, 67141648ul};
-__constant__ uint32_t p13[13] = {524352ul, 67117057ul, 1048704ul, 134234114ul, 2097408ul,
-                                268468228ul, 4194816ul, 536936456ul, 8389632ul, 1073872912ul,
-                                16779264ul, 2147745824ul, 33558528ul};
-__constant__ uint32_t p17[17] = {33554688ul, 134218752ul, 536875008ul, 2147500032ul,
-                                65536ul, 262146ul, 1048584ul, 4194336ul, 16777344ul,
-                                67109376ul, 268437504ul, 1073750016ul, 32768ul, 131073ul,
-                                524292ul, 2097168ul, 8388672ul};
-__constant__ uint32_t p19[19] = {268435968ul, 32768ul, 2097156ul, 134217984ul, 16384ul,
-                                1048578ul, 67108992ul, 8192ul, 524289ul, 33554496ul, 2147487744ul,
-                                262144ul, 16777248ul, 1073743872ul, 131072ul, 8388624ul,
-                                536871936ul, 65536ul, 4194312ul};
-__constant__ uint32_t p23[23] = {2048ul, 33554436ul, 65536ul, 1073741952ul, 2097152ul,
-                                4096ul, 67108872ul, 131072ul, 2147483904ul, 4194304ul,
-                                8192ul, 134217744ul, 262144ul, 512ul, 8388609ul, 16384ul,
-                                268435488ul, 524288ul, 1024ul, 16777218ul, 32768ul,
-                                536870976ul, 1048576ul};
-__constant__ uint32_t p27[27] = {8192ul, 256ul, 1073741832ul, 33554432ul, 1048576ul,
-                                32768ul, 1024ul, 32ul, 134217729ul, 4194304ul, 131072ul,
-                                4096ul, 128ul, 536870916ul, 16777216ul, 524288ul, 16384ul,
-                                512ul, 2147483664ul, 67108864ul, 2097152ul, 65536ul,
-                                2048ul, 64ul, 268435458ul, 8388608ul, 262144ul};
-__constant__ uint32_t p29[29] = {16384ul, 2048ul, 256ul, 32ul, 2147483652ul, 268435456ul,
-                                33554432ul, 4194304ul, 524288ul, 65536ul, 8192ul, 1024ul,
-                                128ul, 16ul, 1073741826ul, 134217728ul, 16777216ul,
-                                2097152ul, 262144ul, 32768ul, 4096ul, 512ul, 64ul,
-                                8ul, 536870913ul, 67108864ul, 8388608ul, 1048576ul, 131072ul};
-__constant__ uint32_t p31[31] = {32768ul, 16384ul, 8192ul, 4096ul, 2048ul, 1024ul,
-                                512ul, 256ul, 128ul, 64ul, 32ul, 16ul, 8ul, 4ul, 2ul,
-                                2147483649ul, 1073741824ul, 536870912ul, 268435456ul,
-                                134217728ul, 67108864ul, 33554432ul, 16777216ul, 8388608ul,
-                                4194304ul, 2097152ul, 1048576ul, 524288ul, 262144ul,
-                                131072ul, 65536ul};
-__constant__ uint32_t p37[37] = {262144ul, 8388608ul, 268435456ul, 0ul, 2ul, 64ul, 2048ul,
-                                65536ul, 2097152ul, 67108864ul, 2147483648ul, 0ul, 16ul,
-                                512ul, 16384ul, 524288ul, 16777216ul, 536870912ul, 0ul,
-                                4ul, 128ul, 4096ul, 131072ul, 4194304ul, 134217728ul,
-                                0ul, 1ul, 32ul, 1024ul, 32768ul, 1048576ul, 33554432ul,
-                                1073741824ul, 0ul, 8ul, 256ul, 8192ul};
+__constant__ uint32_t p3[3] =    {0x92492492, 0x24924924, 0x49249249};
+__constant__ uint32_t p5[5] =    {0x08421084, 0x42108421, 0x10842108, 0x84210842, 0x21084210};
+__constant__ uint32_t p7[7] =    {0x81020408, 0x08102040, 0x40810204, 0x04081020, 0x20408102, 0x02040810, 0x10204081};
+__constant__ uint32_t p11[11] =  {0x08010020, 0x10020040, 0x20040080, 0x40080100, 0x80100200, 0x00200400, 0x00400801,
+                                  0x00801002, 0x01002004, 0x02004008, 0x04008010};
+__constant__ uint32_t p13[13] =  {0x00080040, 0x04002001, 0x00100080, 0x08004002, 0x00200100, 0x10008004, 0x00400200,
+                                  0x20010008, 0x00800400, 0x40020010, 0x01000800, 0x80040020, 0x02001000};
+__constant__ uint32_t p17[17] =  {0x02000100, 0x08000400, 0x20001000, 0x80004000, 0x00010000, 0x00040002, 0x00100008,
+                                  0x00400020, 0x01000080, 0x04000200, 0x10000800, 0x40002000, 0x00008000, 0x00020001,
+                                  0x00080004, 0x00200010, 0x00800040};
+__constant__ uint32_t p19[19] =  {0x10000200, 0x00008000, 0x00200004, 0x08000100, 0x00004000, 0x00100002, 0x04000080,
+                                  0x00002000, 0x00080001, 0x02000040, 0x80001000, 0x00040000, 0x01000020, 0x40000800,
+                                  0x00020000, 0x00800010, 0x20000400, 0x00010000, 0x00400008};
+__constant__ uint32_t p23[23] =  {0x00000800, 0x02000004, 0x00010000, 0x40000080, 0x00200000, 0x00001000, 0x04000008,
+                                  0x00020000, 0x80000100, 0x00400000, 0x00002000, 0x08000010, 0x00040000, 0x00000200,
+                                  0x00800001, 0x00004000, 0x10000020, 0x00080000, 0x00000400, 0x01000002, 0x00008000,
+                                  0x20000040, 0x00100000};
+__constant__ uint32_t p27[27] =  {0x00002000, 0x00000100, 0x40000008, 0x02000000, 0x00100000, 0x00008000, 0x00000400,
+                                  0x00000020, 0x08000001, 0x00400000, 0x00020000, 0x00001000, 0x00000080, 0x20000004,
+                                  0x01000000, 0x00080000, 0x00004000, 0x00000200, 0x80000010, 0x04000000, 0x00200000,
+                                  0x00010000, 0x00000800, 0x00000040, 0x10000002, 0x00800000, 0x00040000};
+__constant__ uint32_t p29[29] =  {0x00004000, 0x00000800, 0x00000100, 0x00000020, 0x80000004, 0x10000000, 0x02000000,
+                                  0x00400000, 0x00080000, 0x00010000, 0x00002000, 0x00000400, 0x00000080, 0x00000010,
+                                  0x40000002, 0x08000000, 0x01000000, 0x00200000, 0x00040000, 0x00008000, 0x00001000,
+                                  0x00000200, 0x00000040, 0x00000008, 0x20000001, 0x04000000, 0x00800000, 0x00100000,
+                                  0x00020000};
+__constant__ uint32_t p31[31] =  {0x00008000, 0x00004000, 0x00002000, 0x00001000, 0x00000800, 0x00000400, 0x00000200,
+                                  0x00000100, 0x00000080, 0x00000040, 0x00000020, 0x00000010, 0x00000008, 0x00000004,
+                                  0x00000002, 0x80000001, 0x40000000, 0x20000000, 0x10000000, 0x08000000, 0x04000000,
+                                  0x02000000, 0x01000000, 0x00800000, 0x00400000, 0x00200000, 0x00100000, 0x00080000,
+                                  0x00040000, 0x00020000, 0x00010000};
+__constant__ uint32_t p37[37] =  {0x00040000, 0x00800000, 0x10000000, 0x00000000, 0x00000002, 0x00000040, 0x00000800,
+                                  0x00010000, 0x00200000, 0x04000000, 0x80000000, 0x00000000, 0x00000010, 0x00000200,
+                                  0x00004000, 0x00080000, 0x01000000, 0x20000000, 0x00000000, 0x00000004, 0x00000080,
+                                  0x00001000, 0x00020000, 0x00400000, 0x08000000, 0x00000000, 0x00000001, 0x00000020,
+                                  0x00000400, 0x00008000, 0x00100000, 0x02000000, 0x40000000, 0x00000000, 0x00000008,
+                                  0x00000100, 0x00002000};
+
 __constant__ uint8_t wheel30[8] = {1,7,11,13,17,19,23,29};
 __constant__ uint8_t wheel30Inc[8] = {6,4,2,4,2,4,6,2};
 __constant__ uint8_t lookup30[30] = {0,0,0,0,0,0,0,1,0,0,0,2,0,3,0,0,0,4,0,5,0,0,0,6,0,0,0,0,0,7};
 
 __constant__ uint16_t threads = 256;
-__constant__ uint32_t cutoff = 65536;
 
 /*
             #############################################
@@ -161,37 +152,12 @@ __device__ void device::sieveMedPrimes(uint32_t * s_sieve, uint32_t * d_primeLis
   }
 }
 
-__device__ void device::sieveMedPrimesPL(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
-  uint32_t primeListLength, uint32_t sieveBits)
-{
-  for(uint32_t pidx = threadIdx.x; pidx < primeListLength; pidx += threads){ // this accepts a list of sieving primes > 37
-    uint32_t p = d_primeList[pidx];
-    if(p*p > bstart+2*sieveBits) break;
-    uint32_t off = p - bstart % p;
-    if(off%2==0) off += p;
-    off = off >> 1; // convert offset to align with half sieve
-    for(; off < sieveBits; off += p) atomicOr(&s_sieve[off >> 5], (1u << (off & 31)));
-  }
-}
-
-__device__ void device::sieveMiddlePrimes(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
-  uint32_t sieveBits)
-{
-  for(uint32_t pidx = threadIdx.x; pidx < cutoff; pidx += threads){ // this accepts a list of sieving primes > 37
-      uint32_t p = d_primeList[pidx];
-    uint32_t off = p - bstart % p;
-    if(off%2==0) off += p;
-    off = (off-1)/2; // convert offset to align with half sieve
-    for(; off < sieveBits; off += p) atomicOr(&s_sieve[off >> 5], (1u << (off & 31)));
-  }
-}
-
 __device__ void device::sieveMedPrimesBase(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
-  uint32_t primeListLength, uint32_t sieveBits)
+  uint32_t primeListLength, uint32_t sieveBits, bool forPrimeList = 0)
 {
   if(threadIdx.x == 0){
-    //s_sieve[0] |= 1;
-    s_sieve[0] ^= 314222ul; //this is a bitmask for primes 3-37
+    if(forPrimeList) s_sieve[0] |= 1; // cross off one
+    else s_sieve[0] ^= 0x0004cb6e; // un-cross off 3-37 if regular sieve
   }
   for(uint32_t pidx = threadIdx.x; pidx < primeListLength; pidx += threads){// this accepts a list of sieving primes > 37
     uint32_t p = d_primeList[pidx];
@@ -200,20 +166,6 @@ __device__ void device::sieveMedPrimesBase(uint32_t * s_sieve, uint32_t * d_prim
   }
 }
 
-__device__ void device::sieveMedPrimesBasePL(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
-  uint32_t primeListLength, uint32_t sieveBits)
-{
-  if(threadIdx.x == 0){
-    s_sieve[0] |= 1;
-    //s_sieve[0] ^= 52078ul; //this is a bitmask for primes 3-31 (use if you want to include 3-31 in the list of primes on the device)
-    // P.S. Trying to run the sieve with such a list will slow it down by about 4x
-  }
-  for(uint32_t pidx = threadIdx.x; pidx < primeListLength; pidx += threads){// this accepts a list of sieving primes > 37
-    uint32_t p = d_primeList[pidx];
-    uint32_t off = p*p/2; // convert offset to align with half sieve
-    for(; off < sieveBits; off += p) atomicOr(&s_sieve[off >> 5], (1u << (off & 31)));
-  }
-}
 /*            ##################################################
               ##### Functions to zero or load SMem sieves ######
               ##################################################
@@ -287,7 +239,12 @@ __device__ void device::countPrimes(uint32_t * s_sieve, uint32_t sieveWords) // 
   s_sieve[threadIdx.x] = count;
 }
 
-__device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint64_t bstart, uint64_t top, volatile uint64_t * d_count)
+/*
+Starts a fight between all the threads who think they have the real value of pi(x).  There are few
+enough such pugilists that an atomicMin operation is preferable to a reduction.
+*/
+__device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords,
+   uint64_t bstart, uint64_t top, volatile uint64_t * d_count, bool isTop = 1)
 {
   uint32_t count = 0;
   for(uint16_t i = threadIdx.x; i < sieveWords; i += threads){
@@ -306,7 +263,8 @@ __device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t * s_counts, 
   __syncthreads();
   if(count != 0 && threadIdx.x > 1) atomicMin(&s_sieve[0], count);
   __syncthreads();
-  if(threadIdx.x == 0 && ~s_sieve[0] != 0) atomicAdd((unsigned long long *)d_count, s_sieve[0]);
+  if(threadIdx.x == 0 && ~s_sieve[0] != 0 && isTop)   atomicAdd((unsigned long long *)d_count, s_sieve[0]);
+  if(threadIdx.x == 0 && ~s_sieve[0] != 0 && !isTop)  atomicSub((unsigned int *)d_count, s_sieve[0]);
 }
 
 /*
@@ -351,7 +309,24 @@ __device__ void device::makeBigSieve(uint32_t * bigSieve, uint32_t * s_sieve, ui
           ##################################################################
 */
 
-__device__ void device::exclusiveScan(uint16_t * s_array, uint32_t size)
+
+__device__ void device::inclusiveScan(uint32_t * s_array, uint32_t size)
+{
+  uint32_t tidx = threadIdx.x;
+
+  uint32_t sum;
+
+  for(uint32_t offset = 1; offset <= size/2; offset *= 2){
+    if(tidx >= offset){
+      sum = s_array[threadIdx.x] + s_array[threadIdx.x - offset];
+    }else{sum = s_array[threadIdx.x];}
+    __syncthreads();
+    s_array[threadIdx.x] = sum;
+    __syncthreads();
+  }
+}
+
+__device__ void device::exclusiveScan(uint16_t * s_array, uint32_t size) // 16 bit data type
 {
   uint32_t tidx = threadIdx.x;
   uint32_t sum;
@@ -447,13 +422,14 @@ __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint
   }
   __syncthreads();
   if(threadIdx.x == 0 && ~s_sieve[0] != 0) d_histogram[blockIdx.x] = s_sieve[0];
+  if(threadIdx.x == 1 && bstart == 0) d_primeOut[0] = 2; // this covers up one since the sieve only holds odds
 }
 
 /*
 This is the version of the movePrimes function that is used for generating the original
 list of sieving primes to be used by the next round of list generating functions.  Unlike
 above versions of the function, it supports array sizes greater than the number of
-threads in the block.
+threads in the block.  I could probably get rid of one of the above.
 */
 
 __device__ void device::movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime)
