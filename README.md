@@ -12,15 +12,16 @@ Benchmarks
 <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>With GTX 1080:</b></p>
 <table>
 <tr><td><b>Range</td><td><b>Time to generate list<br> of sieving primes</td><td><b>Time to sieve<br> this range</td><td><b>Total running time</td><td><b>Count</td></tr>
-<tr><td> 0 to 10<sup>7</sup> </td><td> 0.069 ms</td> <td> 0.37 ms</td><td> 0.100 s <td> 664 579</td></tr>
-<tr><td> 0 to 10<sup>8</sup></td><td>  0.070 ms </td><td> 1.01 ms </td><td> 0.106 s</td><td> 5 761 455</td></tr>  
-<tr><td> 0 to 10<sup>9</sup></td><td> 0.069 ms  </td><td> 6.03 ms  </td><td> 0.121 s </td><td> 50 847 534</td></tr>  
-<tr><td> 0 to 10<sup>10</sup></td><td> 0.125 ms</td><td> 68.7 ms</td><td> 0.168 s</td><td> 455 052 511</td></tr>  
-<tr><td> 0 to 10<sup>12</sup></td><td> 0.132 ms</td><td> 13.0 s</td><td> 13.1 s</td><td> 37 607 912 018</td></tr>  
-<tr><td> 0 to 2<sup>50</sup></td><td> 0.745 ms</td><td> *  </td><td> 33 897 s </td><td> 33 483 379 603 407</td></tr>  
-<tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.132 ms</td><td> 34.8 ms</td><td> 0.137 s</td><td> 38 726 266</td></tr>  
-<tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.739 ms</td><td> 36.2 ms</td><td> 0.143 s</td><td> 30 984 665</td></tr>  
-<tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 20.9 ms</td><td> 130 ms</td><td> 0.242 s </td><td> 25 818 737</td></tr>
+<tr><td> 0 to 10<sup>7</sup> </td><td> 0.064 ms</td> <td> 0.10 ms</td><td> 0.088 s <td> 78 498</td></tr>
+<tr><td> 0 to 10<sup>7</sup> </td><td> 0.055 ms</td> <td> 0.29 ms</td><td> 0.089 s <td> 664 579</td></tr>
+<tr><td> 0 to 10<sup>8</sup></td><td>  0.068 ms </td><td> 0.95 ms </td><td> 0.108 s</td><td> 5 761 455</td></tr>  
+<tr><td> 0 to 10<sup>9</sup></td><td> 0.064 ms  </td><td> 6.07 ms  </td><td> 0.092 s </td><td> 50 847 534</td></tr>  
+<tr><td> 0 to 10<sup>10</sup></td><td> 0.125 ms</td><td> 63.5 ms</td><td> 0.158 s</td><td> 455 052 511</td></tr>  
+<tr><td> 0 to 10<sup>12</sup></td><td> 0.127 ms</td><td> 12.4 s</td><td> 12.5 s</td><td> 37 607 912 018</td></tr>  
+<tr><td> 0 to 2<sup>50</sup></td><td> 0.768 ms</td><td> *  </td><td> 28 653 s </td><td> 33 483 379 603 407</td></tr>  
+<tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.128 ms</td><td> 31.7 ms</td><td> 0.120 s</td><td> 38 726 266</td></tr>  
+<tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.771 ms</td><td> 33.5 ms</td><td> 0.127 s</td><td> 30 984 665</td></tr>  
+<tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 19.4 ms</td><td> 126 ms</td><td> 0.243 s </td><td> 25 818 737</td></tr>
 <tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 97 ms</td><td> 225 ms</td><td> 0.480 s </td><td> 24 201 154</td></tr></table>
 <p>*Separate sieves for <2<sup>40</sup> and >=2<sup>40</sup></p>
 <br>
