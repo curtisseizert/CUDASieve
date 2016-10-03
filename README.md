@@ -12,15 +12,16 @@ Benchmarks
 <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>With GTX 1080:</b></p>
 <table>
 <tr><td><b>Range</td><td><b>Time to generate list<br> of sieving primes</td><td><b>Time to sieve<br> this range</td><td><b>Total running time</td><td><b>Count</td></tr>
-<tr><td> 0 to 10<sup>7</sup> </td><td> 0.069 ms</td> <td> 0.37 ms</td><td> 0.100 s <td> 664 579</td></tr>
-<tr><td> 0 to 10<sup>8</sup></td><td>  0.070 ms </td><td> 1.01 ms </td><td> 0.106 s</td><td> 5 761 455</td></tr>  
-<tr><td> 0 to 10<sup>9</sup></td><td> 0.069 ms  </td><td> 6.03 ms  </td><td> 0.121 s </td><td> 50 847 534</td></tr>  
-<tr><td> 0 to 10<sup>10</sup></td><td> 0.125 ms</td><td> 68.7 ms</td><td> 0.168 s</td><td> 455 052 511</td></tr>  
-<tr><td> 0 to 10<sup>12</sup></td><td> 0.132 ms</td><td> 13.0 s</td><td> 13.1 s</td><td> 37 607 912 018</td></tr>  
-<tr><td> 0 to 2<sup>50</sup></td><td> 0.745 ms</td><td> *  </td><td> 33 897 s </td><td> 33 483 379 603 407</td></tr>  
-<tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.132 ms</td><td> 34.8 ms</td><td> 0.137 s</td><td> 38 726 266</td></tr>  
-<tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.739 ms</td><td> 36.2 ms</td><td> 0.143 s</td><td> 30 984 665</td></tr>  
-<tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 20.9 ms</td><td> 130 ms</td><td> 0.242 s </td><td> 25 818 737</td></tr>
+<tr><td> 0 to 10<sup>7</sup> </td><td> 0.064 ms</td> <td> 0.10 ms</td><td> 0.088 s <td> 78 498</td></tr>
+<tr><td> 0 to 10<sup>7</sup> </td><td> 0.055 ms</td> <td> 0.29 ms</td><td> 0.089 s <td> 664 579</td></tr>
+<tr><td> 0 to 10<sup>8</sup></td><td>  0.068 ms </td><td> 0.95 ms </td><td> 0.108 s</td><td> 5 761 455</td></tr>  
+<tr><td> 0 to 10<sup>9</sup></td><td> 0.064 ms  </td><td> 6.07 ms  </td><td> 0.092 s </td><td> 50 847 534</td></tr>  
+<tr><td> 0 to 10<sup>10</sup></td><td> 0.125 ms</td><td> 63.5 ms</td><td> 0.158 s</td><td> 455 052 511</td></tr>  
+<tr><td> 0 to 10<sup>12</sup></td><td> 0.127 ms</td><td> 12.4 s</td><td> 12.5 s</td><td> 37 607 912 018</td></tr>  
+<tr><td> 0 to 2<sup>50</sup></td><td> 0.768 ms</td><td> *  </td><td> 28 653 s </td><td> 33 483 379 603 407</td></tr>  
+<tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.128 ms</td><td> 31.7 ms</td><td> 0.120 s</td><td> 38 726 266</td></tr>  
+<tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.771 ms</td><td> 33.5 ms</td><td> 0.127 s</td><td> 30 984 665</td></tr>  
+<tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 19.4 ms</td><td> 126 ms</td><td> 0.243 s </td><td> 25 818 737</td></tr>
 <tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 97 ms</td><td> 225 ms</td><td> 0.480 s </td><td> 24 201 154</td></tr></table>
 <p>*Separate sieves for <2<sup>40</sup> and >=2<sup>40</sup></p>
 <br>
@@ -54,7 +55,8 @@ modify the makefile to their needs (e.g. changing the CUDA_DIR variable and prob
 Support for printing primes has just been added.
 
 The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
-```
+
+```C++
 /* main.cu */
 
 #include <iostream>
@@ -64,37 +66,42 @@ The provided binaries have been compiled for x86_64 linux with the compute capab
 
 int main()
 {
-uint64_t bottom = pow(2,63);
-uint64_t top = pow(2,63)+pow(2,30);
-CudaSieve * sieve = new CudaSieve;
-size_t len;
+    uint64_t bottom = pow(2,63);
+    uint64_t top = pow(2,63)+pow(2,30);
+    CudaSieve * sieve = new CudaSieve;
+    size_t len;
 
-uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
+    uint64_t * primes = sieve->getHostPrimes(bottom, top, len);
 
-for(uint32_t i = 0; i < len; i++)
-  std::cout << primes[i] << std::endl;
+    for(uint32_t i = 0; i < len; i++)
+        std::cout << primes[i] << std::endl;
 
-sieve->~CudaSieve();
-return 0;
+    sieve->~CudaSieve();
+    return 0;
 }
 ```
+
 placed in the CUDASieve directory compiles with the command 
-```
+
+```bash
 nvcc -I include cudasieve.a -std=c++11 -arch=compute_30 main.cu
 ```
+
 and prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30</sup>.  The array is deallocated with the explicit destructor call.  Delete[]ing a CudaSieve will cause a fault due to the use of memory allocated by the CUDA API.  The destructor call safely handles deallocation without any need to #include a cuda header, which is the primary motivation for using non-static member functions.  If you do decide to use the CUDA API to deallocate an array (I cannot think of any reason for doing this), remember to set the pointer to NULL so that an implicit CudaSieve destructor call does not try to deallocate again.  Note that multiple arrays can be generated serially with a single CudaSieve object, but each new call deallocates the previous array, so a separate CudaSieve object must exist for each concurrent array that exists.
 
-```
-       /* Returns count from 0 to top */
-  uint64_t countPrimes(uint64_t top);
-       /* Returns count from bottom to top, caveats mentioned below apply */
-  uint64_t countPrimes(uint64_t bottom, uint64_t top);
+```C++
+/* Returns count from 0 to top */
+uint64_t countPrimes(uint64_t top);
 
-       /********* range must be a multiple of 2^24 *********/
-       /* Returns pointer to a page-locked array of primes on the host of length size*/
-  uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
-       /* Returns pointer to an array of primes on the device of length size */
-  uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+/* Returns count from bottom to top, caveats mentioned below apply */
+uint64_t countPrimes(uint64_t bottom, uint64_t top);
+
+/********* range must be a multiple of 2^24 *********/
+/* Returns pointer to a page-locked array of primes on the host of length size*/
+uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
+
+/* Returns pointer to an array of primes on the device of length size */
+uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
 ```
 
 <br>
