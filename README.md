@@ -109,9 +109,7 @@ uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
 Known Issues
 ------------
 
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1) The bottom of the sieving range must be a multiple of 2<sup>17</sup>.  This will be fixed in the near future<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(2) There are instances where the count is off by 1-4 on certain ranges where less than an entire sieving range is counted<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(3) Above 2<sup>40</sup> the range must be a multiple of 2<sup>24</sup>.
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1) Above 2<sup>40</sup> or when printing primes, the range must be a multiple of 2<sup>24</sup>.
 <br>
 
 State of the Project
