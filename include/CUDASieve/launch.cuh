@@ -33,7 +33,7 @@ The naming convention for sieve sizes:
   #define THREADS_PER_BLOCK_LG 256
 #endif
 
-class KernelData;
+
 class PrimeList;
 class SmallSieve;
 class BigSieve;
@@ -42,42 +42,24 @@ class CudaSieve;
 class KernelTime;
 
 
-class KernelTime{
-  friend class BigSieve;
-  friend class SmallSieve;
-private:
-  cudaEvent_t start_, stop_;
-public:
-  KernelTime();
-  ~KernelTime();
-
-  void displayTime();
-  inline void start();
-  inline void stop();
-  float get_ms();
-};
-
-class PrimeOutList{
+class PrimeOutList{ // needs someone else's containers to put primes in.  Handles allocation.
   friend class BigSieve;
   friend class SmallSieve;
   friend class KernelData;
 
 private:
-  uint32_t * d_histogram, *d_histogram_lg;
+  uint32_t * d_histogram = NULL, *d_histogram_lg = NULL;
   uint32_t hist_size_lg, blocks;
   uint16_t threads;
-  uint64_t * h_primeOut, * d_primeOut;
   uint64_t numGuess;
-  void allocate();
-  void fetch(BigSieve & sieve);
+  void allocateDevice(CudaSieve & sieve);
+  void allocateHost(CudaSieve & sieve);
+  void fetch(BigSieve & sieve, uint64_t * d_primeOut);
   void fetch();
   void cleanupAll();
   void cleanupAllDevice();
 
 public:
-  uint64_t * getPrimeOut();
-  void printPrimes();
-
   PrimeOutList(CudaSieve & sieve);
   ~PrimeOutList();
 };
@@ -86,10 +68,10 @@ class PrimeList{
 
 private:
   KernelTime timer;
-  uint32_t * h_primeListLength, * d_histogram, * d_histogram_lg, * d_primeListLength;
+  uint32_t * h_primeListLength = NULL, * d_histogram = NULL, * d_histogram_lg = NULL, * d_primeListLength = NULL;
   uint32_t hist_size_lg, piHighGuess, PL_Max, maxPrime, blocks;
   uint16_t threads;
-  uint32_t * d_primeList;
+  uint32_t * d_primeList = NULL;
 
   uint32_t * getPtr(){return d_primeList;}
   void sievePrimeList();
@@ -104,10 +86,14 @@ public:
 };
 
 class SmallSieve{
+  friend class CudaSieve;
+  friend void host::displayAttributes(CudaSieve & sieve);
 private:
   cudaStream_t stream[3];
   KernelTime timer;
   float time_ms;
+  uint64_t totBlocks, kernelBottom, top;
+
   SmallSieve(){};
   ~SmallSieve(){};
   void count(CudaSieve & sieve);
@@ -121,21 +107,24 @@ public:
 class BigSieve{
   friend class PrimeOutList;
   friend class CudaSieve;
+  friend class Debug;
   friend void host::displayAttributes(const BigSieve & bigsieve);
 
 private:
   KernelTime timer;
   cudaStream_t stream[2];
   uint16_t log2bigSieveSpan;
-  uint32_t blocksSm, blocksLg, primeListLength, bigSieveKB, bigSieveBits, sieveKB, * d_bigSieve, * d_primeList, * ptr32;
-  uint64_t top, bottom, totIter, *ptr64;
+  uint32_t blocksSm, blocksLg, primeListLength, bigSieveKB = 1024, bigSieveBits, sieveKB;
+  uint32_t * d_bigSieve = NULL, * d_primeList = NULL, * ptr32 = NULL;
+  uint64_t top, bottom, totIter, *ptr64 = NULL;
   bool silent, noMemcpy, noPrint;
   float time_ms;
 
-  uint32_t * d_next;
-  uint16_t * d_away;
+  uint32_t * d_next = NULL;
+  uint16_t * d_away = NULL;
 
   BigSieve(CudaSieve & sieve);
+  BigSieve() {}
   ~BigSieve();
 
   void setParameters(CudaSieve & sieve);
@@ -143,6 +132,7 @@ private:
   void fillNextMult();
 
   void launchLoop();
+  void launchLoop(uint64_t bottom, uint64_t top);
   void launchLoopCopy(CudaSieve & sieve);
   void launchLoopPrimes(CudaSieve & sieve);
   void launchLoopPrimesSmall(CudaSieve & sieve);
@@ -152,26 +142,7 @@ public:
 
 };
 
-class KernelData{
-  friend class BigSieve;
-  friend class SmallSieve;
-  friend class PrimeOutList;
-  friend class CudaSieve;
-private:
-  static volatile uint64_t * h_count, * h_blocksComplete;
-  static volatile uint64_t * d_count, * d_blocksComplete;
-public:
-  static uint64_t getCount(){return * h_count;}
-  static uint64_t getBlocks(){return * h_blocksComplete;}
 
-  static void displayProgress(CudaSieve & sieve);
-  static void displayProgress(uint64_t value, uint64_t totIter);
-
-  static void allocate();
-
-  KernelData(){};
-  ~KernelData(){};
-};
 
 
 #endif

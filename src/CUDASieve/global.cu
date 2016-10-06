@@ -238,7 +238,7 @@ __global__ void device::smallSieve(uint32_t * d_primeList, volatile uint64_t * d
   device::sieveInit(s_sieve, sieveWords);                 // (1)
   device::sieveSmallPrimes(s_sieve, sieveWords, bstart);  // (2)
   __syncthreads();
-  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits); // starts sieving at p^2 to not cross of primes
+  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits, 0); // starts sieving at p^2 to not cross of primes
   else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits); // (3)
   __syncthreads();
   device::countPrimes(s_sieve, sieveWords);               // (4)
@@ -260,7 +260,7 @@ __global__ void device::smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t
   device::sieveInit(s_sieve, sieveWords);
   device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
   __syncthreads();
-  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
+  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits, 0);
   else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
   __syncthreads();
   device::countPrimesHist(s_sieve, s_counts, sieveWords);
@@ -333,7 +333,7 @@ __global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve,
   __syncthreads();
   device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
   __syncthreads();
-  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
+  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits, 0);
   else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
   __syncthreads();
   device::makeBigSieve(bigSieve, s_sieve, sieveWords);

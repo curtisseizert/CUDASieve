@@ -142,7 +142,6 @@ in shared memory.
 __device__ void device::sieveMedPrimes(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart,
   uint32_t primeListLength, uint32_t sieveBits)
 {
-  #pragma unroll 1
   for(uint32_t pidx = threadIdx.x; pidx < primeListLength; pidx += threads){ // this accepts a list of sieving primes > 37
     uint32_t p = d_primeList[pidx];
     uint32_t off = p - bstart % p;
@@ -264,7 +263,7 @@ __device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t * s_counts, 
   if(count != 0 && threadIdx.x > 1) atomicMin(&s_sieve[0], count);
   __syncthreads();
   if(threadIdx.x == 0 && ~s_sieve[0] != 0 && isTop)   atomicAdd((unsigned long long *)d_count, s_sieve[0]);
-  if(threadIdx.x == 0 && ~s_sieve[0] != 0 && !isTop)  atomicSub((unsigned int *)d_count, s_sieve[0]);
+  if(threadIdx.x == 0 && ~s_sieve[0] != 0 && !isTop)  atomicAdd((unsigned long long *)d_count, (int) -s_sieve[0]);
 }
 
 /*
@@ -450,6 +449,7 @@ __device__ void device::movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts,
       }
     }
   }
+  __syncthreads();
   if(threadIdx.x == 0 && ~s_sieve[0] != 0) d_histogram[0] = s_sieve[0];
   if((threadIdx.x == blockDim.x - 1) && ~s_sieve[0] == 0) d_histogram[0] = c;
 }

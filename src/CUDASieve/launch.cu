@@ -3,7 +3,7 @@
 CUDASieveLaunch.cu
 
 Host functions for CUDASieve which interface with the device
-Curtis Seizert - cseizert@gmail.com
+Curtis Seizert  <cseizert@gmail.com>
 
 The naming convention for sieve sizes:
  sieveWords == number of 32-bit integers in the array
@@ -12,7 +12,7 @@ The naming convention for sieve sizes:
               this means bits * 2
 
 */
-#include "host.hpp"
+#include "CUDASieve/host.hpp"
 #include "CUDASieve/cudasieve.hpp"
 #include "CUDASieve/device.cuh"
 #include "CUDASieve/global.cuh"
@@ -39,56 +39,56 @@ sieve arrays.
 
 */
 
-void PrimeOutList::printPrimes(){for(uint64_t i = 0; i < *KernelData::h_count; i++) printf("%llu\n", h_primeOut[i]);}
-uint64_t * PrimeOutList::getPrimeOut(){return h_primeOut;}
+//void PrimeOutList::printPrimes(uint64_t * h_primeOut){for(uint64_t i = 0; i < *KernelData::h_count; i++) printf("%llu\n", h_primeOut[i]);}
 
 PrimeOutList::PrimeOutList(CudaSieve & sieve)
 {
-  blocks = (sieve.bigSieveBits)/(32*PL_SIEVE_WORDS);
+  blocks = (sieve.bigsieve.bigSieveBits)/(32*PL_SIEVE_WORDS);
   threads = 512;
 
   hist_size_lg = blocks/512 + 1;
-  numGuess = (uint64_t) (sieve.top/log(sieve.top))*(1+1.2762/log(sieve.top)) -
-  ((sieve.bottom/log(sieve.bottom))*(1+1.2762/log(sieve.bottom)));
+  numGuess = (uint64_t) (sieve.top/log(sieve.top))*(1+1.32/log(sieve.top)) -
+  ((sieve.bottom/log(sieve.bottom))*(1+1.32/log(sieve.bottom)));
 
   //if(sieve.maxPrime_ < sqrt(sieve.top)) numGuess *= (log(sieve.top)+1)/(log(sieve.maxPrime_*sieve.maxPrime_)-1);
 
-  allocate();
+  if(!sieve.flags[20])    allocateHost(sieve);
+                          allocateDevice(sieve);
 }
 
-void PrimeOutList::allocate()
+inline void PrimeOutList::allocateHost(CudaSieve & sieve)
 {
-  if(cudaMallocHost(&h_primeOut, numGuess*sizeof(uint64_t)))
-    {std::cerr << "PrimeOutList: CUDA host memory allocation error: h_primeOut" << std::endl; exit(1);}
-  if(cudaMalloc(&d_primeOut, numGuess*sizeof(uint64_t)))
-    {std::cerr << "PrimeOutList: CUDA device memory allocation error: d_primeOut" << std::endl; exit(1);}
-  if(cudaMalloc(&d_histogram, blocks*sizeof(uint32_t)))
-    {std::cerr << "PrimeOutList: CUDA device memory allocation error: d_histogram" << std::endl; exit(1);}
-  if(cudaMalloc(&d_histogram_lg, hist_size_lg*sizeof(uint32_t)))
-    {std::cerr << "PrimeOutList: CUDA device memory allocation error: d_histogram_lg" << std::endl; exit(1);}
+  sieve.h_primeOut = safeCudaMallocHost(sieve.h_primeOut, numGuess*sizeof(uint64_t));
+}
 
-  cudaMemset(d_primeOut, 0, numGuess*sizeof(uint64_t));
+inline void PrimeOutList::allocateDevice(CudaSieve & sieve)
+{
+  sieve.d_primeOut =  safeCudaMalloc(sieve.d_primeOut, numGuess*sizeof(uint64_t));
+  d_histogram =       safeCudaMalloc(d_histogram, blocks*sizeof(uint32_t));
+  d_histogram_lg =    safeCudaMalloc(d_histogram_lg, hist_size_lg*sizeof(uint32_t));
+
+  cudaMemset(sieve.d_primeOut, 0, numGuess*sizeof(uint64_t));
   cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
   cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 }
 
-void PrimeOutList::fetch(BigSieve & sieve)
+inline void PrimeOutList::fetch(BigSieve & bigsieve, uint64_t * d_primeOut)
 {
   uint64_t * d_ptr = d_primeOut + * KernelData::h_count;
 
   cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
   cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 
-  device::makeHistogram_PLout<<<sieve.bigSieveKB, THREADS_PER_BLOCK>>>
-    (sieve.d_bigSieve, d_histogram);
+  device::makeHistogram_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
+    (bigsieve.d_bigSieve, d_histogram);
   device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
     (d_histogram, d_histogram_lg, blocks);
   device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>
     (d_histogram_lg, KernelData::d_count, hist_size_lg);
   device::increment<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
     (d_histogram, d_histogram_lg, blocks);
-  device::makePrimeList_PLout<<<sieve.bigSieveKB, THREADS_PER_BLOCK>>>
-    (d_ptr, d_histogram, sieve.d_bigSieve, sieve.bottom, sieve.top);
+  device::makePrimeList_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
+    (d_ptr, d_histogram, bigsieve.d_bigSieve, bigsieve.bottom, bigsieve.top);
 }
 
 PrimeOutList::~PrimeOutList()
@@ -96,6 +96,15 @@ PrimeOutList::~PrimeOutList()
   safeCudaFree(d_histogram);
   safeCudaFree(d_histogram_lg);
 }
+
+/*
+                        **************************
+                        ******* PrimeList ********
+                        **************************
+
+PrimeList is the class that makes a list of sieving primes on the device.  This work is orchestrated
+by the static function PrimeList::getSievingPrimes(...), which returns a device pointer.
+*/
 
 uint32_t * PrimeList::getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLength, bool silent=1)
 {
@@ -105,7 +114,10 @@ uint32_t * PrimeList::getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLe
   primelist.sievePrimeList();
   primeListLength = primelist.h_primeListLength[0];
   if(!silent) std::cout << "List of sieving primes in " << primelist.timer.get_ms() << " ms." << std::endl;
-  return primelist.d_primeList;
+  uint32_t * temp = primelist.d_primeList;
+  primelist.d_primeList = NULL;
+
+  return temp;
 }
 
 PrimeList::PrimeList(uint32_t maxPrime)
@@ -117,22 +129,18 @@ PrimeList::PrimeList(uint32_t maxPrime)
 
   hist_size_lg = blocks/512 + 1;
   piHighGuess = (int) (maxPrime/log(maxPrime))*(1+1.2762/log(maxPrime)); // this is an empirically derived formula to calculate a high bound for the prime counting function pi(x)
-  if(maxPrime > 65536) PL_Max = sqrt(maxPrime);
-  else PL_Max = maxPrime;
+
+  PL_Max = std::min((uint32_t)65536, maxPrime);
 }
 
 void PrimeList::allocate()
 {
   h_primeListLength = (uint32_t *)malloc(sizeof(uint32_t));
 
-  if(cudaMalloc(&d_primeList, piHighGuess*sizeof(uint32_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_primeList - " << cudaMalloc(&d_primeList, piHighGuess*sizeof(uint32_t)) << std::endl; exit(1);}
-  if(cudaMalloc(&d_primeListLength, sizeof(uint32_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_primeListLength" << std::endl; exit(1);}
-  if(cudaMalloc(&d_histogram, blocks*sizeof(uint32_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_histogram" << std::endl; exit(1);}
-  if(cudaMalloc(&d_histogram_lg, hist_size_lg*sizeof(uint32_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_histogram_lg" << std::endl; exit(1);}
+  d_primeList =       safeCudaMalloc(d_primeList, piHighGuess*sizeof(uint32_t));
+  d_primeListLength = safeCudaMalloc(d_primeListLength, sizeof(uint32_t));
+  d_histogram =       safeCudaMalloc(d_histogram, blocks*sizeof(uint32_t));
+  d_histogram_lg =    safeCudaMalloc(d_histogram_lg, hist_size_lg*sizeof(uint32_t));
 
   cudaMemset(d_primeList, 0, piHighGuess*sizeof(uint32_t));
   cudaMemset(d_primeListLength, 0, sizeof(uint32_t));
@@ -172,15 +180,13 @@ PrimeList::~PrimeList()
   cudaFree(d_histogram);
   cudaFree(d_histogram_lg);
   cudaFree(d_primeListLength);
+  safeFree(h_primeListLength);
 }
 
 void SmallSieve::run(CudaSieve & sieve)
 {
-  SmallSieve smallsieve;
-
-  smallsieve.createStreams();
-  if(!sieve.flags[0])                   smallsieve.count(sieve);
-  if(!sieve.flags[30])                  smallsieve.timer.displayTime();
+  if(!sieve.flags[0])                   sieve.smallsieve.count(sieve);
+  if(!sieve.flags[30])                  sieve.smallsieve.timer.displayTime();
 }
 
 void SmallSieve::createStreams() // this takes about 0.025 ms
@@ -192,40 +198,33 @@ void SmallSieve::createStreams() // this takes about 0.025 ms
 
 void SmallSieve::count(CudaSieve & sieve)
 {
+  createStreams();
   timer.start();
-  device::smallSieve<<<sieve.totBlocks, THREADS_PER_BLOCK, (sieve.sieveKB << 10), stream[0]>>>
-    (sieve.d_primeList, KernelData::d_count, sieve.kernelBottom, sieve.sieveBits, sieve.primeListLength, KernelData::d_blocksComplete);
+  device::smallSieve<<<totBlocks, THREADS_PER_BLOCK, (sieve.sieveKB << 10), stream[0]>>>
+    (sieve.d_primeList, KernelData::d_count, kernelBottom, sieve.sieveBits, sieve.primeListLength, KernelData::d_blocksComplete);
   if(sieve.isFlag(4)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK, 0, stream[1]>>>
-    (sieve.d_primeList, sieve.smKernelTop, sieve.sieveBits, sieve.primeListLength, sieve.top, KernelData::d_count, KernelData::d_blocksComplete, 1);
+    (sieve.d_primeList, top, sieve.sieveBits, sieve.primeListLength, sieve.top, KernelData::d_count, KernelData::d_blocksComplete, 1);
   if(sieve.isFlag(5)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK, 0, stream[2]>>>
-    (sieve.d_primeList, sieve.kernelBottom, sieve.sieveBits, sieve.primeListLength, sieve.bottom-1, KernelData::d_count, KernelData::d_blocksComplete, 0);
-  KernelData::displayProgress(sieve);
+    (sieve.d_primeList, kernelBottom, sieve.sieveBits, sieve.primeListLength, sieve.bottom-1, KernelData::d_count, KernelData::d_blocksComplete, 0);
+  KernelData::displayProgress(totBlocks+sieve.isFlag(4)+sieve.isFlag(5));
   cudaDeviceSynchronize();
   timer.stop();
 }
 
-/*
-BigSieve handles several tasks that it is suited for.  It counts primes above 2**40 and optionally
-creates an array of primes.  It handles the latter duty for primes below 2**40 as well since it is
-better suited for this task than the SmallSieve machinery.  This leads to some unnecessary stuff
-taking place, but since the operations take <0.1 ms on my hardware, I don't really care.  The static
-function BigSieve::run orchestrates all the things that need to be done, and it is the only public
-member function of this class.  That said, it is best accessed through a CudaSieve member function
-which will invoke it when necessary.
-*/
 
-void BigSieve::run(CudaSieve & sieve)
+void BigSieve::run(CudaSieve & sieve) // coordinates the functions of this class for the CLI
 {
-  BigSieve bigsieve(sieve);
+  sieve.bigsieve.setParameters(sieve);
+  sieve.bigsieve.allocate();
 
-  bigsieve.fillNextMult();
+  sieve.bigsieve.fillNextMult();
 
-  if(!sieve.flags[30])                       host::displayAttributes(bigsieve);
-  if(sieve.flags[0]   &&  !sieve.flags[8] && !sieve.flags[2])  bigsieve.launchLoopPrimesSmall(sieve);
-  if(sieve.flags[0]   &&  !sieve.flags[8] && sieve.flags[2])   bigsieve.launchLoopPrimes(sieve);
-  if(!sieve.flags[0]  &&  !sieve.flags[8])   bigsieve.launchLoop();
-  if(sieve.flags[0]   &&  sieve.flags[8])    bigsieve.launchLoopCopy(sieve);
-  if(!sieve.flags[30])                       bigsieve.timer.displayTime();
+  if(!sieve.flags[30])                      host::displayAttributes(sieve.bigsieve);
+
+  if(sieve.flags[0]   && !sieve.flags[2])   sieve.bigsieve.launchLoopPrimesSmall(sieve);
+  if(sieve.flags[0]   &&  sieve.flags[2])   sieve.bigsieve.launchLoopPrimes(sieve);
+  if(!sieve.flags[0])                       sieve.bigsieve.launchLoop();
+  if(!sieve.flags[30])                      sieve.bigsieve.timer.displayTime();
 }
 
 BigSieve::BigSieve(CudaSieve & sieve)
@@ -237,18 +236,15 @@ BigSieve::BigSieve(CudaSieve & sieve)
 void BigSieve::setParameters(CudaSieve & sieve)
 {
   // Copy relevant sieve paramters
-  this -> bigSieveKB = sieve.bigSieveKB;
-  this -> bigSieveBits = sieve.bigSieveBits;
-  this -> sieveKB = 32; // this is the optimal value for the big sieve
+  sieveKB = 32;                                        // this is the optimal value for the big sieve
   if(!sieve.flags[1]) this -> sieveKB = sieve.sieveKB; // this defaults to 16, which is faster < 2**40
   this -> primeListLength = sieve.primeListLength;
   this -> d_primeList = sieve.d_primeList;
   this -> top = sieve.top;
-  this -> silent = sieve.isFlag(30);
-  this -> noMemcpy = sieve.isFlag(20);
-  this -> noPrint = sieve.isFlag(29);
+  silent = sieve.flags[30];
 
   // Calculate BigSieve specific parameters
+  bigSieveBits = bigSieveKB << 13;
   blocksSm = bigSieveKB/sieveKB;
   blocksLg = primeListLength/THREADS_PER_BLOCK_LG;
   log2bigSieveSpan = log2((double) bigSieveBits) + 1;
@@ -262,13 +258,9 @@ void BigSieve::allocate()
   cudaStreamCreate(&stream[0]);
   cudaStreamCreate(&stream[1]);
 
-  if(cudaMalloc(&d_next, primeListLength*sizeof(uint32_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_next" << std::endl; exit(1);}
-  if(cudaMalloc(&d_away, primeListLength*sizeof(uint16_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_away" << std::endl; exit(1);}
-
-  if(cudaMalloc(&d_bigSieve, bigSieveKB*256*sizeof(uint32_t)))
-    {std::cerr << "PrimeList: CUDA memory allocation error: d_bigSieve" << std::endl; exit(1);}
+  d_next =      safeCudaMalloc(d_next, primeListLength*sizeof(uint32_t));
+  d_away =      safeCudaMalloc(d_away, primeListLength*sizeof(uint16_t));
+  d_bigSieve =  safeCudaMalloc(d_bigSieve, bigSieveKB*256*sizeof(uint32_t));
 
   cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
 }
@@ -285,7 +277,17 @@ void BigSieve::fillNextMult()
   cudaDeviceSynchronize();
 }
 
-void BigSieve::launchLoop()
+/*
+for BigSieve, kernels are launched iteratively.  "bigSieveSm" is essentially the same as
+the small sieve SMem kernel (32 kb sieving array in L1), except that it only sieves with the first 65536
+primes and copies its output (in an atomicOr operation) to a sieve in global memory that is launched
+concurrently.  That sieve is "bigSieveLg," and it sieves with the remaining primes using
+Oliveira's bucket method (described in global.cu) with a much larger sieve array (1024 -
+4096 kb stored in global memory).  At the end of the operation of these two kernels, the large
+global mem sieve has all the composites crossed off, and is counted and zeroed with bigSieveCount.
+*/
+
+void BigSieve::launchLoop() // for CLI
 {
   timer.start();
 
@@ -307,13 +309,30 @@ void BigSieve::launchLoop()
   if(!silent) KernelData::displayProgress(totIter, totIter);
 }
 
+void BigSieve::launchLoop(uint64_t bottom, uint64_t top) // for library where display is not needed
+{
+  for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
+    cudaDeviceSynchronize();
+
+    device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
+      (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
+    device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
+      (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
+
+    cudaDeviceSynchronize();
+
+    device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
+      (d_bigSieve, sieveKB, KernelData::d_count);
+  }
+}
+
 /*
 this is only used for debugging at present.  It copies the bitsieve back to the host after
 each iteration and increments the host pointer to the end of the data copied back.  This
 gives a 'compressed' set of all the primes generated by the sieve.  An equivalent data set
 can be generated from the output of a different prime number generator, and the sets can
 be compared through various bitwise operations.  This is how the prime output of CUDASieve
-is checked (against primesieve).
+is checked against primesieve.
 */
 void BigSieve::launchLoopCopy(CudaSieve & sieve)
 {
@@ -329,11 +348,12 @@ void BigSieve::launchLoopCopy(CudaSieve & sieve)
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy(ptr32, d_bigSieve, bigSieveKB*1024, cudaMemcpyDeviceToHost);
-    ptr32 +=  bigSieveKB*256;
+    cudaMemcpy(ptr32, d_bigSieve, bigSieveKB*1024, cudaMemcpyDeviceToHost); // copy global mem sieve to appropriate
+                                                                            // elements of host bitsieve output
+    ptr32 +=  bigSieveKB*256;                                               // increment pointer
 
     device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
-      (d_bigSieve, sieveKB, KernelData::d_count);
+      (d_bigSieve, sieveKB, KernelData::d_count);                            // count and zero
   }
   timer.stop();
   if(!silent) KernelData::displayProgress(totIter, totIter);
@@ -354,20 +374,13 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
 
     cudaDeviceSynchronize();
 
-    newlist.fetch(*this);
+    newlist.fetch(*this, sieve.d_primeOut);
     cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
     if(!silent) KernelData::displayProgress(value, totIter);
   }
-  // Post sieve stop timer, memcpy, print, pass pointers
   cudaDeviceSynchronize();
-  if(!noMemcpy) cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   timer.stop();
   if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
-
-  if(!noPrint) newlist.printPrimes();
-
-  sieve.h_primeOut = newlist.h_primeOut;
-  sieve.d_primeOut = newlist.d_primeOut;
 }
 
 void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of primes on the device and then copies them back to the host
@@ -383,20 +396,13 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
 
     cudaDeviceSynchronize();
 
-    newlist.fetch(*this);
+    newlist.fetch(*this, sieve.d_primeOut);
     cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
     if(!silent) KernelData::displayProgress(value, totIter);
   }
-  // Post sieve stop timer, memcpy, print, pass pointers
   cudaDeviceSynchronize();
-  if(!noMemcpy) cudaMemcpy(newlist.h_primeOut, newlist.d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   timer.stop();
   if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
-
-  if(!noPrint) newlist.printPrimes();
-
-  sieve.h_primeOut = newlist.h_primeOut;
-  sieve.d_primeOut = newlist.d_primeOut;
 }
 
 BigSieve::~BigSieve()
@@ -404,80 +410,4 @@ BigSieve::~BigSieve()
   safeCudaFree(d_next);
   safeCudaFree(d_away);
   safeCudaFree(d_bigSieve);
-}
-
-void KernelData::allocate()
-{
-  cudaHostAlloc((void **)&KernelData::h_count, sizeof(uint64_t), cudaHostAllocMapped);
-  cudaHostAlloc((void **)&KernelData::h_blocksComplete, sizeof(uint64_t), cudaHostAllocMapped);
-
-  cudaHostGetDevicePointer((long **)&d_count, (long *)KernelData::h_count, 0);
-  cudaHostGetDevicePointer((long **)&d_blocksComplete, (long *)KernelData::h_blocksComplete, 0);
-
-  *KernelData::h_count = 0;
-  *KernelData::h_blocksComplete = 0;
-}
-
-void KernelData::displayProgress(CudaSieve & sieve)
-{
-  if(!sieve.isFlag(30) && sieve.totBlocks != 0){
-    uint64_t value = 0;
-    uint64_t counter = 0;
-    do{
-      uint64_t value1 = * KernelData::h_blocksComplete;
-      counter = * KernelData::h_count;
-      if (value1 > value){
-        std::cout << "\t" << (100*value/sieve.totBlocks) << "% complete\t\t" << counter << " primes counted.\r";
-        std::cout.flush();
-         value = value1;
-       }
-    }while (value < sieve.totBlocks+sieve.isFlag(4));
-    counter = * KernelData::h_count;
-  }
-  cudaDeviceSynchronize();
-  if(!sieve.isFlag(30)) std::cout << "\t" << "100% complete\t\t" << * KernelData::h_count << " primes counted.\r";
-}
-
-inline void KernelData::displayProgress(uint64_t value, uint64_t totIter)
-{
-  std::cout << "\t" << (100*value/totIter) << "% complete\t\t" << *KernelData::h_count << " primes counted.\r";
-  std::cout.flush();
-}
-
-KernelTime::KernelTime()
-{
-  cudaEventCreate(&start_);
-  cudaEventCreate(&stop_);
-}
-
-KernelTime::~KernelTime()
-{
-  cudaEventDestroy(start_);
-  cudaEventDestroy(stop_);
-}
-
-inline void KernelTime::start()
-{
-  cudaEventRecord(start_);
-}
-
-inline void KernelTime::stop()
-{
-  cudaEventRecord(stop_);
-  cudaEventSynchronize(stop_);
-}
-
-float KernelTime::get_ms()
-{
-  float milliseconds = 0;
-  cudaEventElapsedTime(&milliseconds, start_, stop_);
-  return milliseconds;
-}
-
-void KernelTime::displayTime()
-{
-  float milliseconds;
-  cudaEventElapsedTime(&milliseconds, start_, stop_);
-  if(milliseconds >= 1000) std::cout << "kernel time: " << milliseconds/1000 << " seconds." << std::endl;
-  else std::cout << "kernel time: " << milliseconds << " ms.    " << std::endl;
 }

@@ -13,10 +13,12 @@ The naming convention for sieve sizes:
 
 */
 #include <stdint.h>
+#include <iostream>
 #include <time.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include "host.hpp"
+#include "CUDASieve/launch.cuh"
+#include <vector>
 
 
 #ifndef _CUDASIEVE
@@ -32,14 +34,45 @@ The naming convention for sieve sizes:
   #define THREADS_PER_BLOCK_LG 256
 #endif
 
-inline void safeFree(bool * array) {if(array != NULL){free(array); array = NULL;}}
-inline void safeFree(uint32_t * array) {if(array != NULL){free(array); array = NULL;}}
-inline void safeFree(uint64_t * array) {if(array != NULL){free(array); array = NULL;}}
-inline void safeCudaFree(uint16_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
-inline void safeCudaFree(uint32_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
-inline void safeCudaFree(uint64_t * array) {if(array != NULL){cudaFree(array); array = NULL;}}
-inline void safeCudaFreeHost(uint32_t * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}
-inline void safeCudaFreeHost(uint64_t * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}
+namespace host{
+void parseOptions(int argc, char* argv[], CudaSieve * sieve); // for CLI
+void displayAttributes(const BigSieve & bigsieve);
+void displayAttributes(CudaSieve & sieve);
+}
+
+template <typename T>
+inline void safeFree(T * array) {if(array){free(array); array = NULL;}}
+
+template <typename T>
+inline void safeCudaFree(T * array) {if(array){cudaFree(array); array = NULL;}}
+
+template <typename T>
+inline void safeCudaFreeHost(T * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}
+
+template <typename T>
+inline T * safeCudaMalloc(T * d_a, size_t size)
+{
+  if(!d_a){
+    if(cudaMalloc(&d_a, size) != cudaSuccess){
+      std::cerr << "CUDA device memory allocation error: CUDA API error " << cudaMalloc(&d_a, size) << std::endl;
+      std::cerr << "for attempted allocation of size " << size << " at " << &d_a << std::endl;
+      exit(1);
+    }
+  }
+  return (T *) d_a;
+}
+
+template <typename T>
+inline T * safeCudaMallocHost(T * h_a, size_t size)
+{
+  if(!h_a){
+    if(cudaMallocHost(&h_a, size) != cudaSuccess){
+      std::cerr << "CUDA host memory allocation error: CUDA API error " << cudaMalloc(&h_a, size) << std::endl;
+      exit(1);
+    }
+  }
+  return (T *) h_a;
+}
 
 class CudaSieve {
 
@@ -53,13 +86,22 @@ class CudaSieve {
   friend void host::parseOptions(int argc, char* argv[], CudaSieve * sieve);
 
 private:
-  bool flags[32];
-  uint64_t bottom = 0, top = (1u << 30), kernelBottom, smKernelTop, totBlocks, count = 0, * h_primeOut, * d_primeOut;
-  uint16_t gpuNum = 0;
-  uint32_t bigSieveBits, bigSieveKB = 1024, sieveBits, sieveKB = 16, primeListLength, * d_primeList, maxPrime_ = 0;
-  clock_t start_time;
+  bool flags[32] = {0};
+  uint64_t bottom = 0, top = (1u << 30), count = 0;  // sieve parameters
+  uint64_t * h_primeOut = NULL, * d_primeOut = NULL; // pointers to output arrays for prime generation
 
-  void setTop(uint64_t top);
+  uint16_t gpuNum = 0;            // used with cudaSetDevice
+  uint32_t sieveBits, sieveKB = 16; // small sieve parameters, to be deleted from this class
+  uint32_t primeListLength, * d_primeList = NULL, maxPrime_ = 0; // parameters and device pointer
+                                                                 //for list of sieving primes
+  clock_t start_time;
+  uint64_t itop, irange, ibottom; // these are safeguard parameters for segment functions
+  uint64_t sieveOutSize = 0;      // used with getBitSieve for debugging
+
+  BigSieve bigsieve;
+  SmallSieve smallsieve;
+
+  void setTop(uint64_t top);  // superfluous, only used by a friend function
   void setBottom(uint64_t bottom);
   void setSieveKB(uint32_t sieveKB);
   void setBigSieveKB(uint32_t bigSieveKB);
@@ -87,27 +129,36 @@ private:
   void launchCtl();
   void launchCtl(uint32_t maxPrime);
 
+  void copyAndPrint();
+
   void reset();
 
 public:
-  uint32_t * sieveOut;
+  uint32_t * sieveOut = NULL;             // used with getBitSieve for debugging - holds
+                                          // a concatenation of all sieve segments
 
   CudaSieve();
+  CudaSieve(uint64_t bottom, uint64_t top, uint64_t range);
   ~CudaSieve();
 
   bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
   void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
-  uint64_t countPrimes(uint64_t top);
-  uint64_t countPrimes(uint64_t bottom, uint64_t top);
-  uint64_t countPartialSieve(uint64_t top, uint32_t maxPrime);
-  uint64_t countPartialSieve(uint64_t bottom, uint64_t top, uint32_t maxPrime);
 
-  uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
-  uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
-  uint64_t * getHostPrimesPartial(uint64_t bottom, uint64_t top, size_t & size, uint32_t maxPrime);
-  uint64_t * getDevicePrimesPartial(uint64_t bottom, uint64_t top, size_t & size, uint32_t maxPrime);
+  static uint64_t countPrimes(uint64_t top);
+  static uint64_t countPrimes(uint64_t bottom, uint64_t top);
 
+  static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
+  static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count);
+  static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+
+  uint64_t countPrimesSegment(uint64_t bottom, uint64_t top);
+  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count);
+  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count);
+
+  uint32_t * getBitSieve();
+
+  void printPrimes(uint64_t * h_primeOut);
   double elapsedTime();
 };
 
