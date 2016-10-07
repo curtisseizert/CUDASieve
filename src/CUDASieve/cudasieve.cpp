@@ -57,7 +57,7 @@ CudaSieve::~CudaSieve()
   safeCudaFreeHost(h_primeOut);
   safeCudaFree(d_primeOut);
   safeCudaFree(d_primeList);
-  //safeFree(flags);
+  KernelData::deallocate();
 }
 
 void CudaSieve::reset()
@@ -154,7 +154,7 @@ void CudaSieve::CLIPrimes()
 
   launchCtl();
 
-  if(flags[0])                 copyAndPrint();
+  //if(flags[0])                 copyAndPrint();
   if(flags[30] && !flags[0])   std::cout << count << std::endl;
 }
 

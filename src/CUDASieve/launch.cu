@@ -385,7 +385,7 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
 
   timer.start();
 
-  for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
+  for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
@@ -395,12 +395,13 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
     cudaDeviceSynchronize();
 
     newlist.fetch(*this, sieve.d_primeOut);
+    if(!silent && totIter != 0) KernelData::displayProgress(value, totIter);
     cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
-    if(!silent) KernelData::displayProgress(value, totIter);
   }
   cudaDeviceSynchronize();
   timer.stop();
-  if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
+  newlist.~PrimeOutList();
+  if(!silent) {KernelData::displayProgress(1, 1); std::cout<<std::endl;}
 }
 
 void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of primes on the device and then copies them back to the host
@@ -422,6 +423,7 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
   }
   cudaDeviceSynchronize();
   timer.stop();
+  newlist.~PrimeOutList();
   if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
 }
 

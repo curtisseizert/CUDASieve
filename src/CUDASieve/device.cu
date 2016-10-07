@@ -418,13 +418,17 @@ __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint
   for(uint16_t j = 0; j < 32; j++){
     if(1 & (s >> j)){
       uint64_t p = bstart + 64*i + 2*j + 1;
-      if(p > maxPrime) atomicMin(&s_sieve[0], idx+c);
+      if(p > maxPrime) {atomicMin(&s_sieve[0], idx+c); break;}
       else d_primeOut[idx+c] = p;
       c++;
     }
   }
+
   __syncthreads();
-  if(threadIdx.x == 0 && ~s_sieve[0] != 0) d_histogram[blockIdx.x] = s_sieve[0];
+  if(threadIdx.x == blockDim.x-1){
+    if(~s_sieve[0] != 0) d_histogram[blockIdx.x] = s_sieve[0];
+    else d_histogram[blockIdx.x] = idx + c;
+  }
   if(threadIdx.x == 1 && bstart == 0) d_primeOut[0] = 2; // this covers up one since the sieve only holds odds
 }
 

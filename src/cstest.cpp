@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
     uint64_t bottom;
 
-      if(dist_bool(rng2)) bottom = 64 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng1)) - 1);
+      if(!dist_bool(rng2)) bottom = 64 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng1)) - 1);
       else                bottom = 64 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
       bottom -= bottom%64;
       uint64_t top = bottom + (1u << 30);
@@ -77,6 +77,7 @@ int main(int argc, char** argv)
     uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
     if((uint64_t)len != numPsPrimes) std::cout << "Length mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << len << std::endl;
 
+    for(uint32_t i = 0; i < len; i++) std::cout << primes[i] << std::endl;;
     mr_check(primes, 0, len);
 
     cudaFreeHost(primes);

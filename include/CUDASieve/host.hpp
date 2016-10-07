@@ -46,6 +46,7 @@ public:
   static void displayProgress(uint64_t value, uint64_t totIter);
 
   static void allocate();
+  static void deallocate();
 
   KernelData(){};
   ~KernelData(){};

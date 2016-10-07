@@ -42,11 +42,17 @@ void KernelData::allocate()
   cudaHostAlloc((void **)&KernelData::h_count, sizeof(uint64_t), cudaHostAllocMapped);
   cudaHostAlloc((void **)&KernelData::h_blocksComplete, sizeof(uint64_t), cudaHostAllocMapped);
 
-  cudaHostGetDevicePointer((long **)&d_count, (long *)KernelData::h_count, 0);
-  cudaHostGetDevicePointer((long **)&d_blocksComplete, (long *)KernelData::h_blocksComplete, 0);
+  cudaHostGetDevicePointer((unsigned long **)&d_count, (unsigned long *)KernelData::h_count, 0);
+  cudaHostGetDevicePointer((unsigned long **)&d_blocksComplete, (unsigned long *)KernelData::h_blocksComplete, 0);
 
   *KernelData::h_count = 0;
   *KernelData::h_blocksComplete = 0;
+}
+
+void KernelData::deallocate()
+{
+  cudaFreeHost((void *)KernelData::h_count);
+  cudaFreeHost((void *)KernelData::h_blocksComplete);
 }
 
 void KernelData::displayProgress(uint64_t totBlocks)

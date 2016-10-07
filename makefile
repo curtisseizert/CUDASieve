@@ -25,7 +25,7 @@ NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --
 INCLUDES = -I ./include/ -I ./src/ -I $(CUDA_DIR)/include/
 LIB_DIR = -L ./
 CC_LIBS = -lm -lstdc++
-NVCC_LIBS = -lcudart
+NVCC_LIBS = -lcudart $(CC_LIBS)
 
 CLI_SRC_DIR = src
 SRC_DIR = src/CUDASieve
@@ -63,15 +63,15 @@ $(OBJ_DIR)/%.o: $(CLI_SRC_DIR)/%.cpp
 
 ## The cudasieve testing utility depends on boost, openMP and primesieve.
 test: src/cstest.cpp $(CS_LIB)
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -Xcompiler -fopenmp -l$(MAIN) $(CC_LIBS) -lprimesieve $< -o cstest
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -O -Xcompiler -fopenmp -l$(MAIN) $(NVCC_LIBS) -lprimesieve $< -o cstest
 	@echo CSTest has been compiled.  To test the output of cudasieve over random ranges:
 	@echo
-	@echo 		cstest
+	@echo cstest
 	@echo
-	@echo with an argument, cstest performs a more complete test of a range of 2^30 starting
+	@echo With an argument, cstest performs a more complete test of a range of 2^30 starting
 	@echo at that number, e.g.:
 	@echo
-	@echo 		cstest 1667640106059223296
+	@echo cstest 1667640106059223296
 	@echo
 	@echo Please let me know if you find an error: cseizert@gmail.com.
 

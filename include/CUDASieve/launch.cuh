@@ -55,7 +55,9 @@ private:
   void allocateDevice(CudaSieve & sieve);
   void allocateHost(CudaSieve & sieve);
   void fetch(BigSieve & sieve, uint64_t * d_primeOut);
+  void fetchPartial(BigSieve & sieve, uint64_t * d_primeOut);
   void fetch();
+
   void cleanupAll();
   void cleanupAllDevice();
 
