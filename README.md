@@ -99,14 +99,14 @@ uint64_t countPrimes(uint64_t top);
 uint64_t countPrimes(uint64_t bottom, uint64_t top);
 
 /********* range must be a multiple of 2^24 *********/
-/* Returns pointer to a page-locked host array of the primes in [bottom, top] of length size.
+/* Returns pointer to a page-locked host array of the primes in [bottom, top] of length count.
    Memory must be freed with cudaFreeHost() */
 uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & count);
 
 /* Returns a std::vector of the primes in the interval [bottom, top] */
 std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uin64_t top, size_t count);
 
-/* Returns pointer to a device array of in [bottom, top] of length size */
+/* Returns pointer to a device array of primes in [bottom, top] of length count */
 uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count);
 ```
 
@@ -131,7 +131,7 @@ int main()
   return 0;
 }
 ```
-The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  If the range parameter is not included, memory will not be allocated for copying back primes, but a list of sieving primes will still be generated counting functions. The relevant functions are:
+The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  If the range parameter is not included, memory will not be allocated for copying back primes, so that is used as a precursor to calling counting functions. The relevant functions are:
 ```C++
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range); 
   // third parameter is only necessary when copying primes
