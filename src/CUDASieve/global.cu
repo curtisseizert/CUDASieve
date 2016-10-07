@@ -408,6 +408,49 @@ __global__ void device::bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, vol
   device::moveCount(s_sieve, d_count);
 }
 
+
+__global__ void device::bigSieveCountPartial(uint32_t * bigSieve, uint32_t sieveKB, uint64_t bottom, uint64_t top, volatile uint64_t * d_count)
+{
+  uint32_t sieveBits = sieveKB*8192;
+  uint32_t sieveWords = sieveBits/32;
+  extern __shared__ uint32_t s_sieve[];
+  s_sieve[threadIdx.x] = 0;
+  uint32_t count = 0;
+
+  uint32_t blockStart = sieveWords*blockIdx.x;
+  bottom += 64*blockStart;
+  for(uint32_t i = threadIdx.x; i < sieveWords; i += threads_g){
+    uint32_t x = bigSieve[i+blockStart];
+    bigSieve[i+blockStart] ^= bigSieve[i+blockStart];
+    for(uint8_t j = 0; j < 32; j++){
+      bool r = 1u & ~(x >> j);
+      if(r){
+        uint64_t p = bottom + 64*i + 2*j + 1;
+        if(p <= top) count++;
+      }
+    }
+  }
+  __syncthreads();
+  s_sieve[threadIdx.x] = count;
+  __syncthreads();
+
+  device::moveCount(s_sieve, d_count);
+}
+
+__global__ void device::countBottomWord(uint32_t * d_bigSieve, uint64_t bottom, uint64_t cutoff, volatile uint64_t * d_count)
+{
+  uint32_t s = d_bigSieve[0];
+  uint8_t count = 0;
+  for(uint8_t j = 0; j < 32; j++){
+    bool r = 1u & ~(s >> j);
+    if(r){
+      uint64_t p = bottom + 2*j + 1;
+      if(p < cutoff) count++;
+    }
+  }
+  atomicAdd((unsigned long long *)d_count, (int) -count);
+}
+
 /*
       *************************************************************
       ****** Kernels for making lists of primes on the device *****

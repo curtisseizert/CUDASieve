@@ -250,6 +250,8 @@ void BigSieve::setParameters(CudaSieve & sieve)
   log2bigSieveSpan = log2((double) bigSieveBits) + 1;
   if(!sieve.flags[0])   this -> bottom = max((1ull << 40), (unsigned long long) sieve.bottom);
   else                  this -> bottom = sieve.bottom;
+  cutoff = bottom;
+  bottom -= bottom%64;
   totIter = (this->top-this->bottom)/(2*this->bigSieveBits);
 }
 
@@ -290,23 +292,41 @@ global mem sieve has all the composites crossed off, and is counted and zeroed w
 void BigSieve::launchLoop() // for CLI
 {
   timer.start();
+  if(totIter > 0){
+    for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
+      cudaDeviceSynchronize();
 
-  for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
-    cudaDeviceSynchronize();
+      device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
+        (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
+      device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
+        (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
-    device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
-      (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
-    device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
-      (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
+      cudaDeviceSynchronize();
+      if(bottom < cutoff) device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
+      device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t)), stream[0]>>>
+        (d_bigSieve, sieveKB, KernelData::d_count);
 
-    cudaDeviceSynchronize();
-
-    device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
-      (d_bigSieve, sieveKB, KernelData::d_count);
-    if(!silent) KernelData::displayProgress(value, totIter);
+      if(!silent) KernelData::displayProgress(value, totIter);
+    }
   }
+  if(bottom < top) countPartialTop();
   timer.stop();
-  if(!silent) KernelData::displayProgress(totIter, totIter);
+  if(!silent) KernelData::displayProgress(1, 1);
+}
+
+void BigSieve::countPartialTop()
+{
+  cudaDeviceSynchronize();
+
+  device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
+    (d_primeList, d_bigSieve, bottom, sieveKB, 65536);
+  device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
+    (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
+
+  cudaDeviceSynchronize();
+
+  device::bigSieveCountPartial<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
+    (d_bigSieve, sieveKB, bottom, top, KernelData::d_count);
 }
 
 void BigSieve::launchLoop(uint64_t bottom, uint64_t top) // for library where display is not needed

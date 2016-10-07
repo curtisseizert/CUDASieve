@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 
     mr_check(primes, 0, len);
 
-
+    cudaFreeHost(primes);
     }
   return 0;
 }

@@ -109,8 +109,6 @@ inline void CudaSieve::checkRange()
     {std::cerr << "CUDASieve Error: the top of the range must be above 128." << std::endl; exit(1);}
   if((unsigned long long)top > 18446744056529682432ull) // 2^64-2^35
     {std::cerr << "CUDASieve Error: top above supported range (max is 2^64-2^35)." << std::endl; exit(1);}
-  if((bottom > 1ull << 40) && ((top-bottom)%(bigsieve.bigSieveBits*2) != 0))
-    {std::cerr << "CUDASieve Error: above 2**40 range must be a multiple of sieve size." << std::endl; exit(1);}
 }
 
 void CudaSieve::setFlags()

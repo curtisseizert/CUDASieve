@@ -116,8 +116,8 @@ private:
   uint16_t log2bigSieveSpan;
   uint32_t blocksSm, blocksLg, primeListLength, bigSieveKB = 1024, bigSieveBits, sieveKB;
   uint32_t * d_bigSieve = NULL, * d_primeList = NULL, * ptr32 = NULL;
-  uint64_t top, bottom, totIter, *ptr64 = NULL;
-  bool silent, noMemcpy, noPrint;
+  uint64_t top, bottom, cutoff, totIter, *ptr64 = NULL;
+  bool silent, partial, noPrint;
   float time_ms;
 
   uint32_t * d_next = NULL;
@@ -136,6 +136,8 @@ private:
   void launchLoopCopy(CudaSieve & sieve);
   void launchLoopPrimes(CudaSieve & sieve);
   void launchLoopPrimesSmall(CudaSieve & sieve);
+
+  void countPartialTop();
 
 public:
   static void run(CudaSieve & sieve);
