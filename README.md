@@ -1,7 +1,8 @@
 # CUDASieve
 A GPU accelerated C++/CUDA C implementation of the segmented sieve of Eratosthenes
 
-Most of the testing has been done on a GTX 1080 gpu with CUDA 8.0 on the most recent version of <a href="https://www.archlinux.org"> Arch Linux</a> x86_64.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
+
+CUDASieve is a high performance segmented sieve of Eratosthenes for counting and generating prime numbers on NVidia GPUs.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
 algorithm</a> on the GPU.
 While this code is in no way as elegant as that of Kim Walisch's <a href="http://primesieve.org">primesieve</a>, the use of GPU acceleration allows a
 significant speedup.  On the author's hardware, device initialization takes a constant 0.10 seconds regardless of the
