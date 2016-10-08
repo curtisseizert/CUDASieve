@@ -38,7 +38,7 @@ CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range = 0) // used 
 
   setKernelParam();
 
-  d_primeList = PrimeList::getSievingPrimes(sqrt(top), primeListLength, flags[30]);
+  d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
   if(top > (1ul << 40)){
     bigsieve.setParameters(*this);
     bigsieve.allocate();
@@ -85,9 +85,9 @@ void CudaSieve::allocateSieveOut()
 
 inline void CudaSieve::setKernelParam()
 {
-  if(top > 1ull << 63 && !flags[18])  bigsieve.bigSieveKB = 1u << 12;
-  if(top < 1u << 23)                  sieveKB = 2;
-  if(maxPrime_ == 0)                  maxPrime_ = (uint32_t) sqrt(top);
+  if(top > 1ull << 63 && !flags[18])  bigsieve.bigSieveKB = 1u << 12; // bigger sieve size is more efficient above 2^63 (2^12 kb vs 2^10 kb)
+  if(top < 1u << 23)                  sieveKB = 2;                    // smaller sieve size is more efficient for very small numbers (< 2^23)
+  if(maxPrime_ == 0)                  maxPrime_ = (uint32_t) sqrt(top); // maximum sieving prime is top^0.5
 
   bigsieve.bigSieveBits = bigsieve.bigSieveKB << 13;
   sieveBits = sieveKB << 13;
@@ -109,6 +109,10 @@ inline void CudaSieve::checkRange()
     {std::cerr << "CUDASieve Error: the top of the range must be above 128." << std::endl; exit(1);}
   if((unsigned long long)top > 18446744056529682432ull) // 2^64-2^35
     {std::cerr << "CUDASieve Error: top above supported range (max is 2^64-2^35)." << std::endl; exit(1);}
+  if(flags[0] && bottom%64 != 0)
+    {std::cerr << "CUDASieve Error: bottom of range must be a multiple of 64 when copying primes." << std::endl; exit(1);}
+  if(flags[0] && (bottom-top)%(2 * sieveBits) != 0)
+    {std::cerr << "CUDASieve Error: range must be a multiple of sieve size when copying primes." << std::endl; exit(1);}
 }
 
 void CudaSieve::setFlags()
