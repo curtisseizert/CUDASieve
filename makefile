@@ -16,11 +16,11 @@ GPU_CODE = sm_30,sm_32,sm_35,sm_37,sm_50,sm_52,sm_53,sm_60,sm_61,sm_62
 NVCC = $(CUDA_DIR)/bin/nvcc
 CC = clang
 # Flags for the host compiler
-CCFLAGS = -O3 -std=c++11 -c
+CCFLAGS = -O3 -std=c++11 -c -g
 
 # Flags for nvcc
 # ptxas-options=-dlcm=cg (vs. default of ca) is about a 2% performance gain
-NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --ptxas-options=-dlcm=cs
+NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --ptxas-options=-dlcm=cs -g
 
 INCLUDES = -I ./include/ -I ./src/ -I $(CUDA_DIR)/include/
 LIB_DIR = -L ./

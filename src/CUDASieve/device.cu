@@ -242,28 +242,22 @@ __device__ void device::countPrimes(uint32_t * s_sieve, uint32_t sieveWords) // 
 Starts a fight between all the threads who think they have the real value of pi(x).  There are few
 enough such pugilists that an atomicMin operation is preferable to a reduction.
 */
-__device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords,
-   uint64_t bstart, uint64_t top, volatile uint64_t * d_count, bool isTop = 1)
+__device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t sieveWords,
+   uint64_t bstart, uint64_t top)
 {
   uint32_t count = 0;
   for(uint16_t i = threadIdx.x; i < sieveWords; i += threads){
-      uint16_t c = s_counts[i];
-      uint32_t s = ~s_sieve[i];
-      __syncthreads();
-      if(threadIdx.x == 0) s_sieve[0] |= ~s_sieve[0];
-      for(uint16_t j = 0; j < 32; j++){
-        if(1 & (s >> j)){
-          uint64_t p = bstart + 64*i + 2*j + 1;
-          if(p > top && count == 0) {count = c; break;}
-          c++;
-        }
+    uint32_t s = ~s_sieve[i];
+    s_sieve[i] ^= s_sieve[i]; // to make a number that can't be the result in order to see if it has been modified later
+    for(uint16_t j = 0; j < 32; j++){
+      if(1 & (s >> j)){
+        uint64_t p = bstart + 64*i + 2*j + 1;
+        if(p <= top) count++; // set the candidate for the count when the first prime above the threshold is found
       }
     }
+  }
+  s_sieve[threadIdx.x] = count;
   __syncthreads();
-  if(count != 0 && threadIdx.x > 1) atomicMin(&s_sieve[0], count);
-  __syncthreads();
-  if(threadIdx.x == 0 && ~s_sieve[0] != 0 && isTop)   atomicAdd((unsigned long long *)d_count, s_sieve[0]);
-  if(threadIdx.x == 0 && ~s_sieve[0] != 0 && !isTop)  atomicAdd((unsigned long long *)d_count, (int) -s_sieve[0]);
 }
 
 /*
@@ -273,13 +267,14 @@ __device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t * s_counts, 
 
 */
 
-__device__ void device::moveCount(uint32_t * s_sieve, volatile uint64_t * d_count)
+__device__ void device::moveCount(uint32_t * s_sieve, volatile uint64_t * d_count, bool isTop)
 {
   if(threadIdx.x == 0)
   {
     uint64_t count = 0;
     for(uint16_t i=0; i < threads; i++) count += s_sieve[i];
-    atomicAdd((unsigned long long *)d_count, count);
+    if(isTop) atomicAdd((unsigned long long *)d_count, count);
+    else      atomicAdd((unsigned long long *)d_count, (int) -count);
   }
   __syncthreads();
 }

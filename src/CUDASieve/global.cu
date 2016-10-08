@@ -254,7 +254,6 @@ __global__ void device::smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t
   uint64_t bidx = blockIdx.x;
   uint32_t sieveWords = sieveBits/32;
   __shared__ uint32_t s_sieve[4096];
-  __shared__ uint32_t s_counts[4096];
   uint64_t bstart = bottom+bidx*sieveBits*2;
 
   device::sieveInit(s_sieve, sieveWords);
@@ -263,10 +262,9 @@ __global__ void device::smallSieveIncompleteTop(uint32_t * d_primeList, uint64_t
   if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits, 0);
   else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
   __syncthreads();
-  device::countPrimesHist(s_sieve, s_counts, sieveWords);
-  __syncthreads();
-  device::exclusiveScanBig(s_counts, sieveWords);
-  device::countTopPrimes(s_sieve, s_counts, sieveWords, bstart, top, d_count, isTop);
+  device::countTopPrimes(s_sieve, sieveWords, bstart, top);
+  device::moveCount(s_sieve, d_count, isTop);
+
   if(threadIdx.x == 0 && top)atomicAdd((unsigned long long *)d_blocksComplete,1ull);
 }
 

@@ -92,7 +92,7 @@ inline void CudaSieve::setKernelParam()
   bigsieve.bigSieveBits = bigsieve.bigSieveKB << 13;
   sieveBits = sieveKB << 13;
   uint64_t smTop = std::min((unsigned long long) top, 1ull << 40);
-  smallsieve.kernelBottom = bottom - bottom%(2*sieveBits);
+  smallsieve.kernelBottom = bottom - bottom% (2 *  sieveBits);
   smallsieve.totBlocks = (smTop - smallsieve.kernelBottom) / (2 *  sieveBits);
   smallsieve.top = smallsieve.kernelBottom + (smallsieve.totBlocks * sieveBits * 2);
 
@@ -230,9 +230,11 @@ uint64_t CudaSieve::countPrimes(uint64_t top)
   sieve->flags[30] = 1;
   sieve->launchCtl();
 
+  uint64_t count = *KernelData::h_count;
+
   delete sieve;
 
-  return *KernelData::h_count;
+  return count;
 }
 
 uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top)
@@ -244,9 +246,11 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top)
   sieve->flags[30] = 1;
   sieve->launchCtl();
 
+  uint64_t count = *KernelData::h_count;
+
   delete sieve;
 
-  return *KernelData::h_count;
+  return count;
 }
 
 uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & count)

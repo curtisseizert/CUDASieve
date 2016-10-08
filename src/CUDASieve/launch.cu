@@ -206,7 +206,7 @@ void SmallSieve::count(CudaSieve & sieve)
     (sieve.d_primeList, top, sieve.sieveBits, sieve.primeListLength, sieve.top, KernelData::d_count, KernelData::d_blocksComplete, 1);
   if(sieve.isFlag(5)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK, 0, stream[2]>>>
     (sieve.d_primeList, kernelBottom, sieve.sieveBits, sieve.primeListLength, sieve.bottom-1, KernelData::d_count, KernelData::d_blocksComplete, 0);
-  KernelData::displayProgress(totBlocks+sieve.isFlag(4)+sieve.isFlag(5));
+  if(!sieve.isFlag(30)) KernelData::displayProgress(totBlocks+sieve.isFlag(4)+sieve.isFlag(5));
   cudaDeviceSynchronize();
   timer.stop();
 }
@@ -324,7 +324,8 @@ void BigSieve::countPartialTop()
     (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
   cudaDeviceSynchronize();
-
+  
+  if(bottom < cutoff) device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
   device::bigSieveCountPartial<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
     (d_bigSieve, sieveKB, bottom, top, KernelData::d_count);
 }
