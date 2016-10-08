@@ -63,7 +63,7 @@ $(OBJ_DIR)/%.o: $(CLI_SRC_DIR)/%.cpp
 
 ## The cudasieve testing utility depends on boost, openMP and primesieve.
 test: src/cstest.cpp $(CS_LIB)
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -O2 -Xcompiler -fopenmp -l$(MAIN) $(NVCC_LIBS) -lprimesieve $< -o cstest
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -O3 -Xcompiler -fopenmp -l$(MAIN) $(NVCC_LIBS) -lprimesieve $< -o cstest
 	@echo CSTest has been compiled.  To test the output of cudasieve over random ranges:
 	@echo
 	@echo cstest

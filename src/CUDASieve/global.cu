@@ -419,7 +419,6 @@ __global__ void device::bigSieveCountPartial(uint32_t * bigSieve, uint32_t sieve
   bottom += 64*blockStart;
   for(uint32_t i = threadIdx.x; i < sieveWords; i += threads_g){
     uint32_t x = bigSieve[i+blockStart];
-    bigSieve[i+blockStart] ^= bigSieve[i+blockStart];
     for(uint8_t j = 0; j < 32; j++){
       bool r = 1u & ~(x >> j);
       if(r){

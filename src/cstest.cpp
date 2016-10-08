@@ -36,9 +36,11 @@ int main(int argc, char** argv)
 {
   boost::random::ranlux48_base rng1;
   boost::random::lagged_fibonacci44497 rng2;
+  boost::random::mt19937 rng3;
   boost::random::uniform_int_distribution<> dist(0,225726412); // 2^27.5 (to account for top of range below 2^64)
-  boost::random::uniform_int_distribution<> dist_exp(1,30);
+  boost::random::uniform_int_distribution<> dist_exp(1,29);
   boost::random::uniform_int_distribution<> dist_bool(0,1);
+  boost::random::uniform_int_distribution<> dist_range(1,512);
 
   size_t len;
 
@@ -48,12 +50,13 @@ int main(int argc, char** argv)
 
     uint64_t bottom;
 
-      if(!dist_bool(rng2)) bottom = 64 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng1)) - 1);
+      if(dist_bool(rng1)) bottom = 64 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
       else                bottom = 64 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
       bottom -= bottom%64;
-      uint64_t top = bottom + (1u << 30);
+      uint64_t range = ((unsigned long)dist_range(rng3) << 24);
+      uint64_t top = bottom + range;
 
-      std::cout << "\tTrial " << i << "  log2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "          " << "\r";
+      std::cout << "\tTrial " << i << "  log2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "     range = " << range << "            " << "\r";
       std::cout << std::flush;
 
       uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len);

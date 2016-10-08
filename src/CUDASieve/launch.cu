@@ -302,7 +302,9 @@ void BigSieve::launchLoop() // for CLI
         (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
       cudaDeviceSynchronize();
-      if(bottom < cutoff) device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
+      if(bottom < cutoff){
+        device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
+        cudaDeviceSynchronize();}
       device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t)), stream[0]>>>
         (d_bigSieve, sieveKB, KernelData::d_count);
 
@@ -324,10 +326,12 @@ void BigSieve::countPartialTop()
     (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
   cudaDeviceSynchronize();
-  
+
   if(bottom < cutoff) device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
   device::bigSieveCountPartial<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
     (d_bigSieve, sieveKB, bottom, top, KernelData::d_count);
+
+  cudaDeviceSynchronize();
 }
 
 void BigSieve::launchLoop(uint64_t bottom, uint64_t top) // for library where display is not needed

@@ -238,10 +238,6 @@ __device__ void device::countPrimes(uint32_t * s_sieve, uint32_t sieveWords) // 
   s_sieve[threadIdx.x] = count;
 }
 
-/*
-Starts a fight between all the threads who think they have the real value of pi(x).  There are few
-enough such pugilists that an atomicMin operation is preferable to a reduction.
-*/
 __device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t sieveWords,
    uint64_t bstart, uint64_t top)
 {
@@ -252,7 +248,7 @@ __device__ void device::countTopPrimes(uint32_t * s_sieve, uint32_t sieveWords,
     for(uint16_t j = 0; j < 32; j++){
       if(1 & (s >> j)){
         uint64_t p = bstart + 64*i + 2*j + 1;
-        if(p <= top) count++; // set the candidate for the count when the first prime above the threshold is found
+        if(p <= top) count++; // only count primes less than top
       }
     }
   }
