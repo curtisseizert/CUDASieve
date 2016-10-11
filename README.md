@@ -48,7 +48,7 @@ task of sieving these large primes does not increase the amount of memory used s
 
 Correctness
 -----------
-CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 30 000 consecutive tests without error.  A subset of these tests can be performed with the 'cstest' binary.
+CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 80 000 consecutive tests without error.  A subset of these tests can be performed by compiling and running the 'cstest' executable.
 
 Usability
 ---------
@@ -58,7 +58,7 @@ modify the makefile to their needs (e.g. changing the CUDA_DIR variable and prob
 
 Support for printing primes has just been added.
 
-The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
+The provided binary (libcudasieve.a) haa been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
 
 ```C++
 /* main.cpp */
