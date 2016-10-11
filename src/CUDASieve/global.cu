@@ -61,78 +61,9 @@ __global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_hist
   device::movePrimesFirst(s_sieve, s_counts, sieveWords, d_primeList, d_histogram, bstart, maxPrime);
 }
 
-/*
-Some scan functions for incrementing the various histograms made in order
-to index the primes on the device for creating a list.  There are so many because
-I wanted to cover all my bases without having to be clever enough to efficiently
-package a general solution in a single function.
-*/
-
-__global__ void device::exclusiveScan(uint32_t * d_array, uint32_t size)
+__global__ void device::addCount(uint32_t * count, volatile uint64_t * d_count)
 {
-  extern __shared__ uint32_t s_array[];
-  uint32_t tidx = threadIdx.x;
-
-  s_array[tidx] = d_array[tidx];
-  uint32_t sum;
-
-  device::inclusiveScan(s_array, size);
-
-  if(tidx != 0) sum = s_array[tidx-1];
-  else sum = 0;
-  __syncthreads();
-  s_array[tidx] = sum;
-  d_array[tidx] = s_array[threadIdx.x];
-}
-
-__global__ void device::exclusiveScan(uint32_t * d_array, uint32_t * d_totals, uint32_t size)
-{
-  extern __shared__ uint32_t s_array[];
-  uint32_t tidx = threadIdx.x;
-  uint32_t block_offset = blockIdx.x * blockDim.x;
-
-  if(tidx+block_offset < size) s_array[tidx] = d_array[tidx+block_offset];
-  else  s_array[tidx] = 0;
-
-  __syncthreads();
-
-  device::inclusiveScan(s_array, (uint32_t) blockDim.x*2);
-  uint32_t sum;
-
-  if(tidx != 0) sum = s_array[tidx-1];
-  else sum = 0;
-  if(tidx+block_offset < size) d_array[tidx+block_offset] = sum;
-  if(threadIdx.x == 0) d_totals[blockIdx.x] = s_array[blockDim.x-1];
-}
-
-__global__ void device::exclusiveScan(uint32_t * d_array, volatile uint64_t * d_count, uint32_t size)
-{
-  extern __shared__ uint32_t s_array[];
-  uint32_t tidx = threadIdx.x;
-  uint32_t block_offset = blockIdx.x * blockDim.x;
-
-  if(tidx+block_offset < size) s_array[tidx] = d_array[tidx+block_offset];
-  else  s_array[tidx] = 0;
-
-  __syncthreads();
-
-  device::inclusiveScan(s_array, (uint32_t) blockDim.x*2);
-  uint32_t sum;
-
-  if(tidx != 0) sum = s_array[tidx-1];
-  else sum = 0;
-  if(tidx+block_offset < size) d_array[tidx+block_offset] = sum;
-  if(threadIdx.x == 0){* d_count += s_array[blockDim.x-1];}
-}
-
-__global__ void device::increment(uint32_t * d_array, uint32_t * d_totals, uint32_t size)
-{
-  uint32_t tidx = threadIdx.x;
-  uint32_t block_offset = blockIdx.x * blockDim.x;
-  uint32_t arr_size = min(1024, (size-block_offset));
-  uint32_t increment = d_totals[blockIdx.x];
-
-  if(tidx < arr_size) d_array[tidx+block_offset] += increment;
+  * d_count += count[0];
 }
 
 /*

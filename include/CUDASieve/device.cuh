@@ -8,6 +8,7 @@ by Curtis Seizert - cseizert@gmail.com
 */
 
 #include <stdint.h>
+#include <thrust/device_vector.h>
 
 #ifndef _CUDASIEVE_DEVICE
 #define _CUDASIEVE_DEVICE

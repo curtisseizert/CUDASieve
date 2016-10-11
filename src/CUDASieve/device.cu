@@ -299,23 +299,6 @@ __device__ void device::makeBigSieve(uint32_t * bigSieve, uint32_t * s_sieve, ui
           ##################################################################
 */
 
-
-__device__ void device::inclusiveScan(uint32_t * s_array, uint32_t size)
-{
-  uint32_t tidx = threadIdx.x;
-
-  uint32_t sum;
-
-  for(uint32_t offset = 1; offset <= size/2; offset *= 2){
-    if(tidx >= offset){
-      sum = s_array[threadIdx.x] + s_array[threadIdx.x - offset];
-    }else{sum = s_array[threadIdx.x];}
-    __syncthreads();
-    s_array[threadIdx.x] = sum;
-    __syncthreads();
-  }
-}
-
 __device__ void device::exclusiveScan(uint16_t * s_array, uint32_t size) // 16 bit data type
 {
   uint32_t tidx = threadIdx.x;

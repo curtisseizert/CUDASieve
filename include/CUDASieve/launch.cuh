@@ -48,12 +48,11 @@ class PrimeOutList{ // needs someone else's containers to put primes in.  Handle
   friend class KernelData;
 
 private:
-  uint32_t * d_histogram = NULL, *d_histogram_lg = NULL;
-  uint32_t hist_size_lg, blocks;
+  uint32_t * d_histogram = NULL;
+  uint32_t blocks;
   uint16_t threads;
   uint64_t numGuess;
   void allocateDevice(CudaSieve & sieve);
-  void allocateHost(CudaSieve & sieve);
   void fetch(BigSieve & sieve, uint64_t * d_primeOut);
   void fetchPartial(BigSieve & sieve, uint64_t * d_primeOut);
   void fetch();
@@ -70,8 +69,8 @@ class PrimeList{
 
 private:
   KernelTime timer;
-  uint32_t * h_primeListLength = NULL, * d_histogram = NULL, * d_histogram_lg = NULL, * d_primeListLength = NULL;
-  uint32_t hist_size_lg, piHighGuess, PL_Max, maxPrime, blocks;
+  uint32_t * h_primeListLength = NULL, * d_histogram = NULL, * d_primeListLength = NULL;
+  uint32_t piHighGuess, PL_Max, maxPrime, blocks;
   uint16_t threads;
   uint32_t * d_primeList = NULL;
 

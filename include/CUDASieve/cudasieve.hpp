@@ -12,13 +12,13 @@ The naming convention for sieve sizes:
               this means bits * 2
 
 */
-#include <stdint.h>
-#include <iostream>
-#include <time.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <stdint.h>               // uintXX_t
+#include <iostream>               // std::cerr
+#include <time.h>                 // clock_t
+#include <cuda_runtime.h>         // cudaMalloc()
 #include "CUDASieve/launch.cuh"
-#include <vector>
+#include <vector>                 // std::vector
+#include <thrust/device_vector.h> // thrust::device_vector
 
 
 #ifndef _CUDASIEVE
@@ -44,7 +44,7 @@ template <typename T>
 inline void safeFree(T * array) {if(array){free(array); array = NULL;}}
 
 template <typename T>
-inline void safeCudaFree(T * array) {if(array){cudaFree(array); array = NULL;}}
+inline void safeCudaFree(T * array) {if(array != NULL){cudaFree(array); array = NULL;}}
 
 template <typename T>
 inline void safeCudaFreeHost(T * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}
@@ -81,7 +81,6 @@ class CudaSieve {
   friend class SmallSieve;
   friend class BigSieve;
   friend class PrimeOutList;
-  friend class Debug;
   friend void host::displayAttributes(CudaSieve & sieve);
   friend void host::parseOptions(int argc, char* argv[], CudaSieve * sieve);
 
@@ -100,15 +99,6 @@ private:
 
   BigSieve bigsieve;
   SmallSieve smallsieve;
-
-  void setTop(uint64_t top);  // superfluous, only used by a friend function
-  void setBottom(uint64_t bottom);
-  void setSieveKB(uint32_t sieveKB);
-  void setBigSieveKB(uint32_t bigSieveKB);
-  void setGpuNum(uint16_t gpuNum);
-  void setMaxPrime(uint32_t maxPrime);
-  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
-  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
 
   uint64_t getBottom(){return bottom;}
   uint64_t getTop(){return top;}
@@ -136,25 +126,32 @@ private:
 public:
   uint32_t * sieveOut = NULL;             // used with getBitSieve for debugging - holds
                                           // a concatenation of all sieve segments
-
   CudaSieve();
-  CudaSieve(uint64_t bottom, uint64_t top, uint64_t range);
+  CudaSieve(uint64_t bottom, uint64_t top, uint64_t range = 0);
   ~CudaSieve();
+
+  void setSieveKB(uint32_t sieveKB);
+  void setBigSieveKB(uint32_t bigSieveKB);
+  void setGpuNum(uint16_t gpuNum);
+  void setMaxPrime(uint32_t maxPrime);                          // debugging
+  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}  // debugging
+  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;} // debugging
 
   bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
   void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
 
-  static uint64_t countPrimes(uint64_t top);
-  static uint64_t countPrimes(uint64_t bottom, uint64_t top);
+  static uint64_t countPrimes(uint64_t top, uint16_t gpuNum = 0);
+  static uint64_t countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
 
-  static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
-  static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count);
-  static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+  static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
+  static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum = 0);
+  static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
+  static void getDevicePrimesVector(uint64_t bottom, uint64_t top, thrust::device_vector<uint64_t> & dv_primeOut, uint16_t gpuNum = 0);
 
-  uint64_t countPrimesSegment(uint64_t bottom, uint64_t top);
-  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count);
-  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count);
+  uint64_t countPrimesSegment(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
+  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum = 0);
+  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum = 0);
 
   uint32_t * getBitSieve();
 

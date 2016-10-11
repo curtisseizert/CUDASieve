@@ -14,15 +14,15 @@ The naming convention for sieve sizes:
 */
 #include "CUDASieve/host.hpp"
 #include "CUDASieve/cudasieve.hpp"
-#include "CUDASieve/device.cuh"
 #include "CUDASieve/global.cuh"
 #include "CUDASieve/launch.cuh"
 
 #include <iostream>
-#include <stdio.h>
 #include <ctime>
 #include <cmath>
-#include <cuda_profiler_api.h>
+
+#include <thrust/execution_policy.h>
+#include <thrust/scan.h>
 
 volatile uint64_t * KernelData::h_count;
 volatile uint64_t * KernelData::h_blocksComplete;
@@ -39,37 +39,22 @@ sieve arrays.
 
 */
 
-//void PrimeOutList::printPrimes(uint64_t * h_primeOut){for(uint64_t i = 0; i < *KernelData::h_count; i++) printf("%llu\n", h_primeOut[i]);}
-
 PrimeOutList::PrimeOutList(CudaSieve & sieve)
 {
   blocks = (sieve.bigsieve.bigSieveBits)/(32*PL_SIEVE_WORDS);
   threads = 512;
 
-  hist_size_lg = blocks/512 + 1;
   numGuess = (uint64_t) (sieve.top/log(sieve.top))*(1+1.32/log(sieve.top)) -
   ((sieve.bottom/log(sieve.bottom))*(1+1.32/log(sieve.bottom)));
 
-  //if(sieve.maxPrime_ < sqrt(sieve.top)) numGuess *= (log(sieve.top)+1)/(log(sieve.maxPrime_*sieve.maxPrime_)-1);
-
-  if(!sieve.flags[20])    allocateHost(sieve);
-                          allocateDevice(sieve);
-}
-
-inline void PrimeOutList::allocateHost(CudaSieve & sieve)
-{
-  sieve.h_primeOut = safeCudaMallocHost(sieve.h_primeOut, numGuess*sizeof(uint64_t));
+  allocateDevice(sieve);
 }
 
 inline void PrimeOutList::allocateDevice(CudaSieve & sieve)
 {
-  sieve.d_primeOut =  safeCudaMalloc(sieve.d_primeOut, numGuess*sizeof(uint64_t));
-  d_histogram =       safeCudaMalloc(d_histogram, blocks*sizeof(uint32_t));
-  d_histogram_lg =    safeCudaMalloc(d_histogram_lg, hist_size_lg*sizeof(uint32_t));
+  d_histogram =       safeCudaMalloc(d_histogram, (blocks+1)*sizeof(uint32_t));
 
-  cudaMemset(sieve.d_primeOut, 0, numGuess*sizeof(uint64_t));
   cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
-  cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 }
 
 inline void PrimeOutList::fetch(BigSieve & bigsieve, uint64_t * d_primeOut)
@@ -77,16 +62,11 @@ inline void PrimeOutList::fetch(BigSieve & bigsieve, uint64_t * d_primeOut)
   uint64_t * d_ptr = d_primeOut + * KernelData::h_count;
 
   cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
-  cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 
   device::makeHistogram_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
     (bigsieve.d_bigSieve, d_histogram);
-  device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
-    (d_histogram, d_histogram_lg, blocks);
-  device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>
-    (d_histogram_lg, KernelData::d_count, hist_size_lg);
-  device::increment<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
-    (d_histogram, d_histogram_lg, blocks);
+  thrust::exclusive_scan(thrust::device, d_histogram, d_histogram+blocks+1, d_histogram);
+  device::addCount<<<1,1>>>(&d_histogram[blocks], KernelData::d_count);
   device::makePrimeList_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
     (d_ptr, d_histogram, bigsieve.d_bigSieve, bigsieve.bottom, bigsieve.top);
 }
@@ -94,7 +74,6 @@ inline void PrimeOutList::fetch(BigSieve & bigsieve, uint64_t * d_primeOut)
 PrimeOutList::~PrimeOutList()
 {
   safeCudaFree(d_histogram);
-  safeCudaFree(d_histogram_lg);
 }
 
 /*
@@ -127,7 +106,6 @@ PrimeList::PrimeList(uint32_t maxPrime)
   blocks = 1+maxPrime/(64 * PL_SIEVE_WORDS);
   threads = min(512, blocks);
 
-  hist_size_lg = blocks/512 + 1;
   piHighGuess = (int) (maxPrime/log(maxPrime))*(1+1.2762/log(maxPrime)); // this is an empirically derived formula to calculate a high bound for the prime counting function pi(x)
 
   PL_Max = std::min((uint32_t)65536, maxPrime);
@@ -140,12 +118,10 @@ void PrimeList::allocate()
   d_primeList =       safeCudaMalloc(d_primeList, piHighGuess*sizeof(uint32_t));
   d_primeListLength = safeCudaMalloc(d_primeListLength, sizeof(uint32_t));
   d_histogram =       safeCudaMalloc(d_histogram, blocks*sizeof(uint32_t));
-  d_histogram_lg =    safeCudaMalloc(d_histogram_lg, hist_size_lg*sizeof(uint32_t));
 
   cudaMemset(d_primeList, 0, piHighGuess*sizeof(uint32_t));
   cudaMemset(d_primeListLength, 0, sizeof(uint32_t));
   cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
-  cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 }
 
 void PrimeList::sievePrimeList()
@@ -161,12 +137,7 @@ void PrimeList::sievePrimeList()
 
     device::makeHistogram<<<blocks, THREADS_PER_BLOCK>>>
       (d_primeList, d_histogram, 32*THREADS_PER_BLOCK, h_primeListLength[0]);
-    device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
-      (d_histogram, d_histogram_lg, blocks);
-    device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>
-      (d_histogram_lg, d_primeListLength, hist_size_lg);
-    device::increment<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
-      (d_histogram, d_histogram_lg, blocks);
+    thrust::exclusive_scan(thrust::device, d_histogram, d_histogram+blocks, d_histogram);
     device::makePrimeList<<<blocks, THREADS_PER_BLOCK>>>
       (d_primeList, d_histogram, 32*THREADS_PER_BLOCK, h_primeListLength[0], maxPrime);
 
@@ -178,7 +149,6 @@ void PrimeList::sievePrimeList()
 PrimeList::~PrimeList()
 {
   cudaFree(d_histogram);
-  cudaFree(d_histogram_lg);
   cudaFree(d_primeListLength);
   safeFree(h_primeListLength);
 }
@@ -301,10 +271,12 @@ void BigSieve::launchLoop() // for CLI
       device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
         (d_primeList, d_next, d_away, d_bigSieve, bigSieveBits, primeListLength, log2bigSieveSpan);
 
+
+      if(bottom < cutoff){ // conditional hidden between asynchronous launch and sync operation
+        cudaDeviceSynchronize();
+        device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);}
+
       cudaDeviceSynchronize();
-      if(bottom < cutoff){
-        device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
-        cudaDeviceSynchronize();}
       device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t)), stream[0]>>>
         (d_bigSieve, sieveKB, KernelData::d_count);
 
@@ -332,6 +304,7 @@ void BigSieve::countPartialTop()
     (d_bigSieve, sieveKB, bottom, top, KernelData::d_count);
 
   cudaDeviceSynchronize();
+  //cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
 }
 
 void BigSieve::launchLoop(uint64_t bottom, uint64_t top) // for library where display is not needed
@@ -405,7 +378,7 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
   }
   cudaDeviceSynchronize();
   timer.stop();
-  newlist.~PrimeOutList();
+  // newlist.~PrimeOutList();
   if(!silent) {KernelData::displayProgress(1, 1); std::cout<<std::endl;}
 }
 
@@ -428,7 +401,7 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
   }
   cudaDeviceSynchronize();
   timer.stop();
-  newlist.~PrimeOutList();
+  // newlist.~PrimeOutList();
   if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
 }
 
