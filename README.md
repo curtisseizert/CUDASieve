@@ -96,22 +96,26 @@ and prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30
 ```C++
                 /* CudaSieve static member functions */
 /* Returns count from 0 to top */
-uint64_t countPrimes(uint64_t top);
+uint64_t countPrimes(uint64_t top, uint16_t gpuNum)
 
 /* Returns count from bottom to top, caveats mentioned below apply */
-uint64_t countPrimes(uint64_t bottom, uint64_t top);
+uint64_t countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
 
 /********* range must be a multiple of 2^24 *********/
 /* Returns pointer to a page-locked host array of the primes in [bottom, top] of length count.
    Memory must be freed with cudaFreeHost() */
-uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & count);
+uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 
 /* Returns a std::vector of the primes in the interval [bottom, top] */
-std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uin64_t top, size_t count);
+std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uin64_t top, size_t count, uint16_t gpuNum)
 
 /* Returns pointer to a device array of primes in [bottom, top] of length count */
-uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count);
+uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
+
+/* Returns a thrust::device_vector of primes */
+void getDevicePrimesVector(uint64_t bottom, uint64_t top, thrust::device_vector<uint64_t> & prime_vector, uint16_t gpuNum)
 ```
+All of the above functions have an optional last parameter 'gpuNum' to allow the user to specify the CUDA enabled device used.  If this is not included, the value defaults to 0.
 
 For many iterations, it is preferable to avoid some of the overhead associated with memory allocation and creating the list of sieving primes repeatedly.  Fortunately, it is possible to do most of this work once by calling the CudaSieve constructor with two or three arguments (as shown below) and then calling the suitable non-static member function.
 
