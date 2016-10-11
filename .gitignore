@@ -5,3 +5,5 @@ readsieve
 NewStuff.cpp
 *.o
 ./CUDASieve
+./cudasieve
+./cstest

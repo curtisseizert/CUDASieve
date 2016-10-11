@@ -38,7 +38,7 @@ int main(int argc, char** argv)
   boost::random::lagged_fibonacci44497 rng2;
   boost::random::mt19937 rng3;
   boost::random::uniform_int_distribution<> dist(100000000,225726412); // 2^27.5 (to account for top of range below 2^64)
-  boost::random::uniform_int_distribution<> dist_exp(29,30);
+  boost::random::uniform_int_distribution<> dist_exp(1,30);
   boost::random::uniform_int_distribution<> dist_bool(0,1);
   boost::random::uniform_int_distribution<> dist_range(1,128);
 

@@ -11,16 +11,15 @@ CUDA_DIR = /opt/cuda
 GPU_ARCH = compute_30
 GPU_CODE = sm_30,sm_32,sm_35,sm_37,sm_50,sm_52,sm_53,sm_60,sm_61,sm_62
 
-
 # Compilers to use
 NVCC = $(CUDA_DIR)/bin/nvcc
 CC = clang
 # Flags for the host compiler
-CCFLAGS = -O3 -std=c++11 -c -g
+CCFLAGS = -O3 -std=c++11 -c
 
 # Flags for nvcc
 # ptxas-options=-dlcm=cg (vs. default of ca) is about a 2% performance gain
-NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --ptxas-options=-dlcm=cs -g -lineinfo
+NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --ptxas-options=-dlcm=cs -lineinfo
 
 INCLUDES = -I ./include/ -I ./src/ -I $(CUDA_DIR)/include/
 LIB_DIR = -L ./
@@ -53,7 +52,7 @@ $(MAIN): $(MAIN_OBJ) $(CS_LIB)
 
 # Linking to make a library
 $(CS_LIB): $(OBJS) $(NV_SRCS)
-	$(NVCC) $(NVCC_FLAGS) -lib $(INCLUDES) $^ -o $@
+	$(NVCC) $(NVCC_FLAGS) $(NVCC_LIBS) -lib $(INCLUDES) $^ -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
