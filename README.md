@@ -111,7 +111,7 @@ std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uin64_t top, size_t c
 uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count);
 
 ```
-The thrust branch adds the ability to get a thrust::device_vector of primes at the cost of much larger binaries.
+The above functions all have an optional last parameter that allows the user to specify the CUDA-enabled device used for the sieve.  If this is not specified, the value defaults to 0.  The thrust branch adds the ability to get a thrust::device_vector of primes at the cost of much larger binaries.
 
 For many iterations, it is preferable to avoid some of the overhead associated with memory allocation and creating the list of sieving primes repeatedly.  Fortunately, it is possible to do most of this work once by calling the CudaSieve constructor with two or three arguments (as shown below) and then calling the suitable non-static member function.
 
