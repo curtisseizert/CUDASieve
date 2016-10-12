@@ -36,8 +36,7 @@ Benchmarks
 <tr><td>GTX 1080</td><td>0.069 ms</td><td>6.03 ms</td><td>0.121 s</td></tr>
 </table>
 
-The output for each of these ranges has been verified against that of primesieve both in count and (for the ranges covering
-less than a span of 2<sup>32</sup>) in the actual primes generated.  Additionally, this code contains a way of generating a
+Additionally, this code contains a way of generating a
  list of sieving primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
   Generating the list of 189 961 800 primes from 38 to 4e9 takes just 89 ms.  This is about 8.3 GB of primes/second.  Primes
   are also prepared to be printed in the same way.  For example, the kernel time for preparing an array of all the (25 818 737) primes from 2<sup>60</sup> to 2<sup>60</sup>+2<sup>30</sup> and getting this array to the host is 157 ms with the GTX 1080.
@@ -46,6 +45,10 @@ less than a span of 2<sup>32</sup>) in the actual primes generated.  Additionall
 for sieving up to 2<sup>64</sup>.  The fact that
 large primes are handled in global memory, rather than on-chip, means that increasing the number of blocks working on the
 task of sieving these large primes does not increase the amount of memory used since the data set is not duplicated.<br><br>
+
+Correctness
+-----------
+CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 30 000 consecutive tests without error.  A subset of these tests can be performed with the 'cstest' binary.
 
 Usability
 ---------
@@ -151,11 +154,8 @@ The above code creates a CudaSieve object with an appropriate list of sieving pr
 
 Limitations
 ------------
-
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1) Above 2<sup>40</sup> or when printing primes, the range must be a multiple of 2<sup>24</sup>.<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(2) Above 2<sup>40</sup> or when printing primes, the bottom must be a multiple of 64.
-<br>
+When printing primes (or getting poiners to arrays of primes), the bottom of the range must be a multiple of 64, and the size of the range must be a multiple of 2<sup>24</sup> (2<sup>26</sup> over 2<sup>63</sup>).  There is also a device memory leak of ~150 kb that can become problematic after several thousand iterations when using the functions described above, but it is of no consequence for the CLI.
 
 State of the Project
 -------------------
-I am continuing verification tests on outputs of the sieve at various ranges as well as working out counting and printing ranges that include less than a full sieve segment.  Let me know if you have any requests for features, and I'll see what I can do.
+I am continuing verification tests and working out copying primes without any range limitations.  Let me know if you have any requests for features, and I'll see what I can do.
