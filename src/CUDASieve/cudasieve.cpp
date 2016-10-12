@@ -15,16 +15,14 @@ Curtis Seizert - cseizert@gmail.com
 #include <stdio.h>
 #include <math.h>
 #include <cinttypes>
-#include <vector>
 
 CudaSieve::CudaSieve()
 {
   start_time = clock();
-  //cudaSetDeviceFlags(cudaDeviceMapHost);
   KernelData::allocate();
 }
 
-CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range = 0) // used for getting necessary data up front
+CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range) // used for getting necessary data up front
 {                                                                       // for repetitive counts etc.
   start_time = clock();
   KernelData::allocate();
@@ -68,8 +66,6 @@ void CudaSieve::reset()
   start_time = clock();
 }
 
-void CudaSieve::setTop(uint64_t top){this -> top = top;}
-void CudaSieve::setBottom(uint64_t bottom){this -> bottom = bottom;}
 void CudaSieve::setSieveKB(uint32_t sieveKB){this -> sieveKB = sieveKB;}
 void CudaSieve::setBigSieveKB(uint32_t bigSieveKB){this -> bigsieve.bigSieveKB = bigSieveKB;}
 void CudaSieve::setGpuNum(uint16_t gpuNum){this -> gpuNum = gpuNum;}
@@ -136,18 +132,26 @@ double CudaSieve::elapsedTime()
 
 inline void CudaSieve::launchCtl()
 {
+  uint64_t numGuess = (uint64_t) (top/log(top))*(1+1.32/log(top)) -
+  ((bottom/log(bottom))*(1+1.32/log(bottom)));
+
+  if(flags[0]){
+    d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
+    cudaMemset(d_primeOut, 0, numGuess*sizeof(uint64_t));
+  }
+
   setKernelParam();
   d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
 
   if(!flags[30] && !flags[0])     host::displayAttributes(*this);
   if(!flags[2]  && !flags[0])     SmallSieve::run(*this);
   if(flags[1]   || flags[0])      BigSieve::run(*this);
-  if(flags[0]   && !flags[20])    cudaMemcpy(h_primeOut, d_primeOut, *KernelData::h_count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   count = KernelData::getCount();
 }
 
 void CudaSieve::copyAndPrint()
 {
+  h_primeOut = safeCudaMallocHost(h_primeOut, count*sizeof(uint64_t));
   cudaMemcpy(h_primeOut, d_primeOut, count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   for(uint64_t i = 0; i < count; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
 }
@@ -158,14 +162,16 @@ void CudaSieve::CLIPrimes()
 
   launchCtl();
 
-  //if(flags[0])                 copyAndPrint();
+  if(flags[0])                 copyAndPrint();
   if(flags[30] && !flags[0])   std::cout << count << std::endl;
 }
 
-uint64_t CudaSieve::countPrimesSegment(uint64_t bottom, uint64_t top)
+uint64_t CudaSieve::countPrimesSegment(uint64_t bottom, uint64_t top, uint16_t gpuNum) // add range checks
 {
   this->bottom = bottom;
   this->top = top;
+  this->gpuNum = gpuNum;
+
   *KernelData::h_count = 0;
   flags[30] = 1;
   setKernelParam();
@@ -177,12 +183,13 @@ uint64_t CudaSieve::countPrimesSegment(uint64_t bottom, uint64_t top)
   return *KernelData::h_count;
 }
 
-uint64_t * CudaSieve::getHostPrimesSegment(uint64_t bottom, size_t & count)
+uint64_t * CudaSieve::getHostPrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum)
 {
   if(bottom < ibottom || bottom + irange > itop) {count = 0; return NULL;} // make sure the range provided is in bounds
 
   this->bottom = bottom;
   top = bottom + irange;
+  this->gpuNum = gpuNum;
 
   flags[30] = 1;
   flags[0] = 1;
@@ -203,12 +210,13 @@ uint64_t * CudaSieve::getHostPrimesSegment(uint64_t bottom, size_t & count)
   return h_primeOut;
 }
 
-uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, size_t & count)
+uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum)
 {
   if(bottom < ibottom || bottom + irange > itop) {count = 0; return NULL;} // make sure the range provided is in bounds
 
   this->bottom = bottom;
   top = bottom + irange;
+  this->gpuNum = gpuNum;
 
   flags[30] = 1;
   flags[0] = 1;
@@ -226,10 +234,11 @@ uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, size_t & count)
   return d_primeOut;
 }
 
-uint64_t CudaSieve::countPrimes(uint64_t top)
+uint64_t CudaSieve::countPrimes(uint64_t top, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve;
 
+  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->flags[30] = 1;
   sieve->launchCtl();
@@ -241,10 +250,11 @@ uint64_t CudaSieve::countPrimes(uint64_t top)
   return count;
 }
 
-uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top)
+uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve;
 
+  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
@@ -257,18 +267,22 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top)
   return count;
 }
 
-uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & count)
+uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve;
 
+  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
   sieve->flags[0] = 1;
   sieve->flags[29] = 1;
+  sieve->flags[20] = 1;
 
   sieve->launchCtl();
   count = *KernelData::h_count;
+
+  sieve->h_primeOut = safeCudaMallocHost(sieve->h_primeOut, count*sizeof(uint64_t));
   cudaMemcpy(sieve->h_primeOut, sieve->d_primeOut, count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
   uint64_t * temp = sieve->h_primeOut;            // copy address to temp pointer
   sieve->h_primeOut = NULL;                       // prevent the array from being freed
@@ -278,10 +292,11 @@ uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & coun
   return temp;
 }
 
-std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count)
+std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve;
 
+  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
@@ -306,10 +321,11 @@ std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t t
   return temp;
 }
 
-uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count)
+uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve;
 
+  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;

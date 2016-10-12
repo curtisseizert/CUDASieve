@@ -101,15 +101,6 @@ private:
   BigSieve bigsieve;
   SmallSieve smallsieve;
 
-  void setTop(uint64_t top);  // superfluous, only used by a friend function
-  void setBottom(uint64_t bottom);
-  void setSieveKB(uint32_t sieveKB);
-  void setBigSieveKB(uint32_t bigSieveKB);
-  void setGpuNum(uint16_t gpuNum);
-  void setMaxPrime(uint32_t maxPrime);
-  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
-  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
-
   uint64_t getBottom(){return bottom;}
   uint64_t getTop(){return top;}
 
@@ -137,6 +128,13 @@ public:
   uint32_t * sieveOut = NULL;             // used with getBitSieve for debugging - holds
                                           // a concatenation of all sieve segments
 
+  void setSieveKB(uint32_t sieveKB);
+  void setBigSieveKB(uint32_t bigSieveKB);
+  void setGpuNum(uint16_t gpuNum);
+  void setMaxPrime(uint32_t maxPrime);
+  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
+  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
+
   CudaSieve();
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range);
   ~CudaSieve();
@@ -145,16 +143,16 @@ public:
 
   void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
 
-  static uint64_t countPrimes(uint64_t top);
-  static uint64_t countPrimes(uint64_t bottom, uint64_t top);
+  static uint64_t countPrimes(uint64_t top, uint16_t gpuNum = 0);
+  static uint64_t countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
 
-  static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size);
-  static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count);
-  static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size);
+  static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
+  static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum = 0);
+  static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
 
-  uint64_t countPrimesSegment(uint64_t bottom, uint64_t top);
-  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count);
-  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count);
+  uint64_t countPrimesSegment(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
+  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum = 0);
+  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum = 0);
 
   uint32_t * getBitSieve();
 

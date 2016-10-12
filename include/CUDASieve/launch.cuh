@@ -52,8 +52,7 @@ private:
   uint32_t hist_size_lg, blocks;
   uint16_t threads;
   uint64_t numGuess;
-  void allocateDevice(CudaSieve & sieve);
-  void allocateHost(CudaSieve & sieve);
+  void allocateDevice();
   void fetch(BigSieve & sieve, uint64_t * d_primeOut);
   void fetchPartial(BigSieve & sieve, uint64_t * d_primeOut);
   void fetch();
