@@ -48,7 +48,7 @@ task of sieving these large primes does not increase the amount of memory used s
 
 Correctness
 -----------
-CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 30 000 consecutive tests without error.  A subset of these tests can be performed with the 'cstest' binary.
+CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 80 000 consecutive tests without error.  A subset of these tests can be performed with the 'cstest' binary.
 
 Usability
 ---------
@@ -56,9 +56,7 @@ Usability
 At this point, the code is barely more than a proof of principle, so I imagine that anyone who is interested in this can
 modify the makefile to their needs (e.g. changing the CUDA_DIR variable and probably specifying fewer microarchitectures)  The include file names have not changed between CUDA 7.5 and 8.0, so this can be built without modifications to the source code (at least in linux) with CUDA 7.5 as well.  Windows support is currently being held up by my unwillingness to deal with the issue of Windows support.
 
-Support for printing primes has just been added.
-
-The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the cudasieve.a binary (with nvcc).  For example:
+The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the libcudasieve.a binary (with nvcc).  For example:
 
 ```C++
 /* main.cpp */
@@ -88,7 +86,7 @@ int main()
 placed in the CUDASieve directory compiles with the command 
 
 ```bash
-nvcc -I include -lcudasieve -std=c++11 -arch=compute_30 main.cu
+nvcc -I include -lcudasieve -std=c++11 -arch=compute_30 main.cpp
 ```
 
 and prints out the primes in the range 2<sup>63</sup> to 2<sup>63</sup>+2<sup>30</sup>.
@@ -111,7 +109,9 @@ std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uin64_t top, size_t c
 
 /* Returns pointer to a device array of primes in [bottom, top] of length count */
 uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count);
+
 ```
+The thrust branch adds the ability to get a thrust::device_vector of primes at the cost of much larger binaries.
 
 For many iterations, it is preferable to avoid some of the overhead associated with memory allocation and creating the list of sieving primes repeatedly.  Fortunately, it is possible to do most of this work once by calling the CudaSieve constructor with two or three arguments (as shown below) and then calling the suitable non-static member function.
 
@@ -134,14 +134,10 @@ int main()
   return 0;
 }
 ```
-The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  If the range parameter is not included, memory will not be allocated for copying back primes, so that is used as a precursor to calling counting functions. The relevant functions are:
+The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  The relevant functions are:
 ```C++
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range); 
   // third parameter is only necessary when copying primes
-
-  uint64_t countPrimesSegment(uint64_t bottom, uint64_t top); 
-  // counts primes in [bottom, top] as long as they are in
-  // the range specified in the constructor call
                                                               
   uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count);   
   uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count); 
