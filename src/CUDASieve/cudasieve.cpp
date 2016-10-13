@@ -45,7 +45,7 @@ CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range) // used for 
   if(range != 0){
     uint64_t numGuess = (uint64_t) ((bottom+range)/log((bottom+range))*(1+1.2762/log((bottom+range)))) -
       ((bottom/log(bottom))*(1+1.2762/log(bottom)));
-    h_primeOut = safeCudaMallocHost(h_primeOut, numGuess*sizeof(uint64_t));
+    h_primeOut =  safeCudaMallocHost(h_primeOut, numGuess*sizeof(uint64_t));
     d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
   }
 }
@@ -82,6 +82,7 @@ void CudaSieve::allocateSieveOut()
 inline void CudaSieve::setKernelParam()
 {
   if(top > 1ull << 63 && !flags[18])  bigsieve.bigSieveKB = 1u << 12; // bigger sieve size is more efficient above 2^63 (2^12 kb vs 2^10 kb)
+  if(top < 1ull << 40 && !flags[18] && (top - bottom) >= 1ull << 32) bigsieve.bigSieveKB = 1u << 14; // also optimization
   if(top < 1u << 23)                  sieveKB = 2;                    // smaller sieve size is more efficient for very small numbers (< 2^23)
   if(maxPrime_ == 0)                  maxPrime_ = (uint32_t) sqrt(top); // maximum sieving prime is top^0.5
 
@@ -105,10 +106,8 @@ inline void CudaSieve::checkRange()
     {std::cerr << "CUDASieve Error: the top of the range must be above 128." << std::endl; exit(1);}
   if((unsigned long long)top > 18446744056529682432ull) // 2^64-2^35
     {std::cerr << "CUDASieve Error: top above supported range (max is 2^64-2^35)." << std::endl; exit(1);}
-  if(flags[0] && bottom%64 != 0)
-    {std::cerr << "CUDASieve Error: bottom of range must be a multiple of 64 when copying primes." << std::endl; exit(1);}
-  if(flags[0] && (bottom-top)%(2 * sieveBits) != 0)
-    {std::cerr << "CUDASieve Error: range must be a multiple of sieve size when copying primes." << std::endl; exit(1);}
+  if(top - bottom < 10)
+    {std::cerr << "CUDASieve Error: range must be greater than 10." << std::endl; exit(1);}
 }
 
 void CudaSieve::setFlags()
@@ -132,10 +131,11 @@ double CudaSieve::elapsedTime()
 
 inline void CudaSieve::launchCtl()
 {
-  uint64_t numGuess = (uint64_t) (top/log(top))*(1+1.32/log(top)) -
-  ((bottom/log(bottom))*(1+1.32/log(bottom)));
-
   if(flags[0]){
+    uint64_t numGuess = (uint64_t) (top/log(top))*(1+1.32/log(top)) -
+    ((bottom/log(bottom))*(1+1.32/log(bottom)));
+    if(numGuess < 256) numGuess = (2 * (top - bottom)/log(bottom));
+    if(top - bottom < 256) numGuess = (top-bottom)/4;
     d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
     cudaMemset(d_primeOut, 0, numGuess*sizeof(uint64_t));
   }
@@ -212,10 +212,12 @@ uint64_t * CudaSieve::getHostPrimesSegment(uint64_t bottom, size_t & count, uint
 
 uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum)
 {
-  if(bottom < ibottom || bottom + irange > itop) {count = 0; return NULL;} // make sure the range provided is in bounds
+  if(bottom < ibottom) {count = 0; return NULL;} // make sure the range provided is in bounds
+
 
   this->bottom = bottom;
   top = bottom + irange;
+  if(top > itop) top = itop;
   this->gpuNum = gpuNum;
 
   flags[30] = 1;

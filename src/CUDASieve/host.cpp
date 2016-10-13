@@ -14,6 +14,13 @@ Curtis Seizert - cseizert@gmail.com
 #include <iostream>
 #include <stdio.h>
 
+
+volatile uint64_t * KernelData::h_count;
+volatile uint64_t * KernelData::h_blocksComplete;
+volatile uint64_t * KernelData::d_count;
+volatile uint64_t * KernelData::d_blocksComplete;
+
+
 void host::displayAttributes(CudaSieve & sieve)
 {
   if(!sieve.flags[30]) std::cout << "\n" << sieve.primeListLength << " sieving primes in (37, " << sieve.maxPrime_ << "]" << std::endl;

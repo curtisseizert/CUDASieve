@@ -434,18 +434,14 @@ __global__ void device::bigSieveCountPartial(uint32_t * bigSieve, uint32_t sieve
   device::moveCount(s_sieve, d_count);
 }
 
-__global__ void device::countBottomWord(uint32_t * d_bigSieve, uint64_t bottom, uint64_t cutoff, volatile uint64_t * d_count)
+// This zeros the appropriate part of the bottom word of the sieve when the bottom is not a multiple of 64
+
+__global__ void device::zeroBottomWord(uint32_t * d_bigSieve, uint64_t bottom, uint64_t cutoff)
 {
-  uint32_t s = d_bigSieve[0];
-  uint8_t count = 0;
-  for(uint8_t j = 0; j < 32; j++){
-    bool r = 1u & ~(s >> j);
-    if(r){
-      uint64_t p = bottom + 2*j + 1;
-      if(p < cutoff) count++;
-    }
-  }
-  atomicAdd((unsigned long long *)d_count, (int) -count);
+  uint16_t remBits = (cutoff - bottom)/2;
+  uint32_t mask = (1u << remBits) -1;
+
+  d_bigSieve[0] |= mask;
 }
 
 /*
@@ -466,6 +462,18 @@ __global__ void device::makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_
   device::moveCountHist(s_sieve, d_histogram);
 }
 
+__global__ void device::makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_histogram, uint64_t bottom, uint64_t maxPrime)
+{
+  uint32_t sieveWords = 256;
+  __shared__ uint32_t s_sieve[256];
+  uint64_t bstart = bottom + blockIdx.x*sieveWords*64;
+
+  device::sieveInit(s_sieve, d_bigSieve, sieveWords);
+  device::countPrimesHist(s_sieve, sieveWords, bstart, maxPrime);
+  __syncthreads();
+  device::moveCountHist(s_sieve, d_histogram);
+}
+
 __global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_histogram,
    uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime)
 {
@@ -479,5 +487,6 @@ __global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_
   device::countPrimes(s_sieve, s_counts, sieveWords);
   __syncthreads();
   device::exclusiveScan(s_counts, sieveWords);
+  __syncthreads();
   device::movePrimes(s_sieve, s_counts, sieveWords, d_primeOut, d_histogram, bstart, maxPrime);
 }

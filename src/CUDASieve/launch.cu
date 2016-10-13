@@ -21,11 +21,6 @@ The naming convention for sieve sizes:
 #include <ctime>
 #include <cmath>
 
-volatile uint64_t * KernelData::h_count;
-volatile uint64_t * KernelData::h_blocksComplete;
-volatile uint64_t * KernelData::d_count;
-volatile uint64_t * KernelData::d_blocksComplete;
-
 /*
                       *************************
                       ****** PrimeOutList *****
@@ -44,8 +39,6 @@ PrimeOutList::PrimeOutList(CudaSieve & sieve)
   hist_size_lg = blocks/512 + 1;
   numGuess = (uint64_t) (sieve.top/log(sieve.top))*(1+1.32/log(sieve.top)) -
   ((sieve.bottom/log(sieve.bottom))*(1+1.32/log(sieve.bottom)));
-
-  //if(sieve.maxPrime_ < sqrt(sieve.top)) numGuess *= (log(sieve.top)+1)/(log(sieve.maxPrime_*sieve.maxPrime_)-1);
 
   allocateDevice();
 }
@@ -67,7 +60,7 @@ inline void PrimeOutList::fetch(BigSieve & bigsieve, uint64_t * d_primeOut)
   cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 
   device::makeHistogram_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
-    (bigsieve.d_bigSieve, d_histogram);
+    (bigsieve.d_bigSieve, d_histogram, bigsieve.bottom, bigsieve.top);
   device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
     (d_histogram, d_histogram_lg, blocks);
   device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>
@@ -290,7 +283,7 @@ void BigSieve::launchLoop() // for CLI
 
       if(bottom < cutoff){
         cudaDeviceSynchronize();
-        device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
+        device::zeroBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff);
         }
       cudaDeviceSynchronize();
       device::bigSieveCount<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t)), stream[0]>>>
@@ -315,7 +308,10 @@ void BigSieve::countPartialTop()
 
   cudaDeviceSynchronize();
 
-  if(bottom < cutoff) device::countBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff, KernelData::d_count);
+  if(bottom < cutoff){
+    cudaDeviceSynchronize();
+    device::zeroBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff);
+    }
   device::bigSieveCountPartial<<<blocksSm, THREADS_PER_BLOCK, (THREADS_PER_BLOCK*sizeof(uint32_t))>>>
     (d_bigSieve, sieveKB, bottom, top, KernelData::d_count);
 
@@ -385,15 +381,19 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
     device::bigSieveLg<<<blocksLg, THREADS_PER_BLOCK_LG, 0, stream[1]>>>
       (d_primeList, d_next, d_away, d_bigSieve,  bigSieveBits, primeListLength, log2bigSieveSpan);
 
+    if(bottom < cutoff){
+      cudaDeviceSynchronize();
+      device::zeroBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff);
+      }
+
     cudaDeviceSynchronize();
 
     newlist.fetch(*this, sieve.d_primeOut);
-    if(!silent && totIter != 0) KernelData::displayProgress(value, totIter);
+    if(!silent && totIter != 0) KernelData::displayProgress(value, max(1ul, (unsigned long)totIter));
     cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
   }
   cudaDeviceSynchronize();
   timer.stop();
-  //newlist.~PrimeOutList();
   if(!silent) {KernelData::displayProgress(1, 1); std::cout<<std::endl;}
 }
 
@@ -403,21 +403,24 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
 
   timer.start();
 
-  for(uint64_t value = 1; bottom + 2* bigSieveBits <= top; bottom += 2*bigSieveBits, value++){
+  for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
 
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB, primeListLength);
 
+    if(bottom < cutoff){
+      cudaDeviceSynchronize();
+      device::zeroBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff);
+      }
     cudaDeviceSynchronize();
 
     newlist.fetch(*this, sieve.d_primeOut);
     cudaMemset(d_bigSieve, 0, bigSieveKB*256*sizeof(uint32_t));
-    if(!silent) KernelData::displayProgress(value, totIter);
+    if(!silent) KernelData::displayProgress(value, max(1ul, (unsigned long)totIter));
   }
   cudaDeviceSynchronize();
   timer.stop();
-  //newlist.~PrimeOutList();
-  if(!silent) {KernelData::displayProgress(totIter, totIter); std::cout<<std::endl;}
+  if(!silent) {KernelData::displayProgress(1, 1); std::cout<<std::endl;}
 }
 
 BigSieve::~BigSieve()

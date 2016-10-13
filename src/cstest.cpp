@@ -38,11 +38,9 @@ int main()
   boost::random::lagged_fibonacci44497 rng2;
   boost::random::mt19937 rng3;
   boost::random::uniform_int_distribution<> dist(0,225726412); // 2^27.5 (to account for top of range below 2^64)
-  boost::random::uniform_int_distribution<> dist_exp_count(1,36);
-  boost::random::uniform_int_distribution<> dist_exp_copy(1,30);
+  boost::random::uniform_int_distribution<> dist_exp(1,36);
   boost::random::uniform_int_distribution<> dist_bool(0,1);
   boost::random::uniform_int_distribution<> dist_range_count(1,2000000000);
-  boost::random::uniform_int_distribution<> dist_range_copy(1,128);
 
   size_t len;
   uint16_t testNum;
@@ -51,9 +49,9 @@ int main()
   uint64_t bottom;
   uint64_t range;
 
-  std::cout << "\nTests available:\n\t(1) Count - bottom and range multiples of 1, requires maximum 1.77 GB device memory" << std::endl;
-  std::cout << "\t(2) Output - bottom multiples of 64, range multiples of 2^26, requires maximum  3.33 GB device memory" << std::endl;
-  std::cout << "\t(3) Specific Range - Miller-Rabin test of all output primes in range, same characteristics as 2" << std::endl;
+  std::cout << "\nTests available:\n\t(1) Count - requires maximum 1.77 GB device memory" << std::endl;
+  std::cout << "\t(2) Output - requires maximum  3.33 GB device memory" << std::endl;
+  std::cout << "\t(3) Specific Range - Miller-Rabin test of all output primes in range" << std::endl;
   std::cout << "::Test Number? [1/2/3] ";
   std::cin >> testNum;
 
@@ -64,9 +62,9 @@ int main()
   }
 
   if(testNum == 3){
-    std::cout << "Bottom of range? [multiples of 64] ";
+    std::cout << "::Bottom of range? [multiples of 64] ";
     std::cin >> bottom;
-    std::cout << "Range to check? [multiples of 2^26] ";
+    std::cout << "::Range to check? [multiples of 2^26] ";
     std::cin >> range;
   }
 
@@ -77,8 +75,8 @@ int main()
 
     for(uint32_t i = 0; i < numTrials; i++){
 
-      if(dist_bool(rng1)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp_count(rng3)) - 1);
-      else                bottom = 1 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp_count(rng2)) - 1);
+      if(dist_bool(rng1)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
+      else                bottom = 1 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
 
       range = ((unsigned long)dist_range_count(rng3));
       uint64_t top = bottom + range;
@@ -100,31 +98,39 @@ int main()
 
   if(testNum == 2){
 
-    std::cout << "\tErrors\tTrial\tlog2(bottom)\tbottom\t\t\trange" << std::endl;
-    std::cout << "\t==========================================================================" << std::endl;
+    std::cout << "\tErrors\tTrial\tlog2(bottom)\tbottom\t\t\trange\t\tcount" << std::endl;
+    std::cout << "\t=================================================================================" << std::endl;
 
     for(uint32_t i = 0; i < numTrials; i++){
 
-      if(dist_bool(rng1)) bottom = 64 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp_copy(rng3)) - 1);
-      else                bottom = 64 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp_copy(rng2)) - 1);
-      bottom -= bottom%64;
-      range = ((unsigned long)dist_range_copy(rng3) << 26);
+      if(dist_bool(rng1)) bottom = (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
+      else                bottom = (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
+      range = ((unsigned long)dist_range_count(rng1));
       uint64_t top = bottom + range;
 
       std::cout << "                                                                                                                       \r";
       std::cout << "\t" << tests_with_error << "\t" << i+1 << "\t" << log2(bottom) << "\t\t" << bottom << "\r";
-      std::cout << "\t\t\t\t\t\t\t\t" << range << "          \r";
+      std::cout << "\t\t\t\t\t\t\t\t" << range << "                            \r";
       std::cout << std::flush;
 
       uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len);
+
+      std::cout << "\t\t\t\t\t\t\t\t\t\t" << len << "          \r";
+      std::cout << std::flush;
+
       uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
+
+
 
       if((uint64_t) len != numPsPrimes){
         std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
         tests_with_error++;
       }
-      mr_check(primes, 65536, len, 0);
-      mr_check(primes, -65536, len, 0);
+      uint32_t fromEnds = std::min(65536u, (unsigned) len);
+      if(len != 0){
+        mr_check(primes, fromEnds, len, 0);
+        mr_check(primes, fromEnds, len, 0);
+      }
 
       cudaFreeHost(primes);
     }
@@ -132,9 +138,6 @@ int main()
 
 
   if(testNum == 3){
-
-    if(bottom%64 != 0){std::cout << "Bottom must be a multiple of 64." << std::endl; return 1;}
-    if(range%67108864 != 0){std::cout << "Range must be a multiple of 2^26." << std::endl; return 1;}
 
     uint64_t top = bottom + range;
 
@@ -157,7 +160,7 @@ int main()
 
 inline void mr_check(uint64_t * primes, int64_t numToCheck, size_t len, bool skipline) // iterative miller rabin check with some safeguards
 {
-  if(primes[0] == 0) std::cout << "Invalid array: contains zeros" << std::endl;
+  if(primes[0] == 0) std::cout << "\nInvalid array: contains zeros" << std::endl;
   else{
     if(numToCheck == 0) numToCheck = len;
     if(numToCheck > 0){

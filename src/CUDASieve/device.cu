@@ -222,6 +222,23 @@ __device__ void device::countPrimesHist(uint32_t * s_sieve, uint32_t * s_counts,
   __syncthreads();
 }
 
+__device__ void device::countPrimesHist(uint32_t * s_sieve, uint32_t sieveWords, uint64_t bstart, uint64_t maxPrime) // destroys the original sieve data, maintains primes per word
+{
+  for(uint16_t i = threadIdx.x; i < sieveWords; i += threads)
+  {
+    uint32_t s = ~s_sieve[i];
+    uint16_t count = 0;
+    for(uint16_t j = 0; j < 32; j++){
+      if(1 & (s >> j)){
+        uint64_t p = bstart + 64*i + 2*j + 1;
+        if(p <= maxPrime) count++; // only count primes less than top
+      }
+    }
+    s_sieve[i] = count;
+  }
+  __syncthreads();
+}
+
 __device__ void device::countPrimes(uint32_t * s_sieve, uint32_t sieveWords) // destroys original sieve data
 {
   uint16_t count = 0;

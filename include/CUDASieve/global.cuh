@@ -15,7 +15,6 @@ by Curtis Seizert - cseizert@gmail.com
 namespace device
 {
   __global__ void firstPrimeList(uint32_t * d_primeList, uint32_t * d_histogram, uint32_t sieveBits, uint32_t maxPrime);
-  __device__ void inclusiveScan(uint32_t * d_array, uint32_t size);
   __global__ void exclusiveScan(uint32_t * d_array, uint32_t size);
   __global__ void exclusiveScan(uint32_t * d_array, uint32_t * d_totals, uint32_t size);
   __global__ void exclusiveScan(uint32_t * d_array, volatile uint64_t * d_count, uint32_t size);
@@ -31,8 +30,9 @@ namespace device
   __global__ void bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, volatile uint64_t * d_count);
   __global__ void bigSieveCountPartial(uint32_t * bigSieve, uint32_t sieveKB, uint64_t bottom, uint64_t top, volatile uint64_t * d_count);
   __global__ void makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_histogram);
+  __global__ void makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_histogram, uint64_t bottom, uint64_t maxPrime);
   __global__ void makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_histogram, uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime);
-  __global__ void countBottomWord(uint32_t * d_bigSieve, uint64_t bottom, uint64_t cutoff, volatile uint64_t * d_count);
+  __global__ void zeroBottomWord(uint32_t * d_bigSieve, uint64_t bottom, uint64_t cutoff);
 }
 
 #endif
