@@ -1,6 +1,6 @@
 /*
 
-CUDASieveSieves.cuh
+cudasieve.hpp
 
 Host functions for CUDASieve
 Curtis Seizert - cseizert@gmail.com
@@ -130,16 +130,21 @@ public:
 
   void setSieveKB(uint32_t sieveKB);
   void setBigSieveKB(uint32_t bigSieveKB);
-  void setGpuNum(uint16_t gpuNum);
   void setMaxPrime(uint32_t maxPrime);
   void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
   void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
 
+  void setGpu(uint16_t gpuNum);
+
   CudaSieve();
+  CudaSieve(uint16_t gpuNum);
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range);
   ~CudaSieve();
 
   bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
+
+  static void listDevices();
+  char * getCurrentDeviceName();
 
   void CLIPrimes(); // used by the CLI where options are set by host::parseOptions()
 

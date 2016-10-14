@@ -1,6 +1,6 @@
 /*
 
-CUDASieveDevice.cu
+device.cu
 
 Contains the __device__ functions and __constant__s for CUDASieve
 by Curtis Seizert <cseizert@gmail.com>
@@ -389,6 +389,7 @@ primelist generation with the 32 bit version.  This may change when the big siev
 gets support for better range granularity.
 */
 
+
 __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime)
 {
    // this is meant for when words per array == number of threads
@@ -418,17 +419,17 @@ __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint
 {
    // this is meant for when words per array == number of threads
   uint16_t i = threadIdx.x;
-  uint16_t c = 0;
-  uint32_t s = ~s_sieve[i];
-  uint32_t idx = d_histogram[blockIdx.x] + s_counts[i];
+  uint16_t c = 0;                 // used to hold the count
+  uint32_t s = ~s_sieve[i];       // the ~ operation means primes are now represented as 1s
+  uint32_t idx = d_histogram[blockIdx.x] + s_counts[i]; // offset for where each thread should put its first prime
   __syncthreads();
-  if(threadIdx.x == 0) s_sieve[0] |= ~s_sieve[0];
+  if(threadIdx.x == 0) s_sieve[0] |= ~s_sieve[0]; // s_sieve[0] is made ~0 so we can tell if it has been changed
   for(uint16_t j = 0; j < 32; j++){
-    if(1 & (s >> j)){
-      uint64_t p = bstart + 64*i + 2*j + 1;
-      if(p > maxPrime) {atomicMin(&s_sieve[0], idx+c); break;}
-      else d_primeOut[idx+c] = p;
-      c++;
+    if(1 & (s >> j)){                              // if prime
+      uint64_t p = bstart + 64*i + 2*j + 1;        // calculate value
+      if(p > maxPrime) {atomicMin(&s_sieve[0], idx+c); break;} // if value is above threshold, submit and break
+      else d_primeOut[idx+c] = p; // otherwise copy p to the output array
+      c++;                        // incrememnt count
     }
   }
 

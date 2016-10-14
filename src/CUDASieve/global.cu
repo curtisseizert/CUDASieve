@@ -1,9 +1,9 @@
 /*
 
-CUDASieveGlobal.cu
+global.cu
 
 Contains the __global__ functions in the device code for CUDASieve
-by Curtis Seizert <cseizert@gmail.com>
+Curtis Seizert <cseizert@gmail.com>
 
 The small sieve kernels start at about line 250, those relevant to the big sieve
 start around 350.  The above statement may become inaccurate at any time.
@@ -20,8 +20,6 @@ start around 350.  The above statement may become inaccurate at any time.
 #include "CUDASieve/device.cu"
   // for some reason linking together two files with device code kills performance
   // so it is necessary to link them by including a source file like this
-  // has this changed in CUDA 8.0 so I don't have to look like I don't know what I'm
-  // doing (which I don't nonetheless)?  There are some things we may never know...
 
 __constant__ uint8_t wheel30_g[8] = {1,7,11,13,17,19,23,29};
 __constant__ uint8_t wheel30Inc_g[8] = {6,4,2,4,2,4,6,2};

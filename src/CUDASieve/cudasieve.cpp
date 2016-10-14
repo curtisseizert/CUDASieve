@@ -1,9 +1,9 @@
 /*
 
-CUDASieveHost.cpp
+cudasieve.cpp
 
-Host functions for CUDASieve
-Curtis Seizert - cseizert@gmail.com
+CudaSieve class functions for CUDASieve
+Curtis Seizert  <cseizert@gmail.com>
 
 */
 
@@ -18,6 +18,14 @@ Curtis Seizert - cseizert@gmail.com
 
 CudaSieve::CudaSieve()
 {
+  start_time = clock();
+  KernelData::allocate();
+}
+
+CudaSieve::CudaSieve(uint16_t gpuNum)
+{
+  this->setGpu(gpuNum);
+
   start_time = clock();
   KernelData::allocate();
 }
@@ -68,8 +76,9 @@ void CudaSieve::reset()
 
 void CudaSieve::setSieveKB(uint32_t sieveKB){this -> sieveKB = sieveKB;}
 void CudaSieve::setBigSieveKB(uint32_t bigSieveKB){this -> bigsieve.bigSieveKB = bigSieveKB;}
-void CudaSieve::setGpuNum(uint16_t gpuNum){this -> gpuNum = gpuNum;}
 void CudaSieve::setMaxPrime(uint32_t maxPrime){this -> maxPrime_ = maxPrime;}
+
+void CudaSieve::setGpu(uint16_t gpuNum){this -> gpuNum = gpuNum; cudaSetDevice(gpuNum);}
 
 void CudaSieve::allocateSieveOut(uint64_t size){sieveOut = new uint32_t[size/sizeof(uint32_t)];}
 
@@ -77,6 +86,28 @@ void CudaSieve::allocateSieveOut()
 {
   sieveOutSize = (top-bottom)/2;
   sieveOut = new uint32_t[sieveOutSize/sizeof(uint32_t)];
+}
+
+void CudaSieve::listDevices()
+{
+  int count;
+  cudaGetDeviceCount(&count);
+  std::cout << "\n" << count << " CUDA enabled devices available:" << std::endl;
+
+  for(int i = 0; i < count; i++){
+    std::cout << "\t(" << i << ") : ";
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, i);
+    std::cout << prop.name << std::endl;
+  }
+  std::cout << std::endl;
+}
+
+char * CudaSieve::getCurrentDeviceName()
+{
+  cudaDeviceProp prop;
+  cudaGetDeviceProperties(&prop, gpuNum);
+  return prop.name;
 }
 
 inline void CudaSieve::setKernelParam()
@@ -121,7 +152,8 @@ void CudaSieve::setFlags()
 
 inline void CudaSieve::displayRange()
 {
-  std::cout << "\n" << "Counting primes from " << bottom << " to " << top << std::endl;
+  std::cout << "\n" << "\tCounting primes from " << bottom << " to " << top << std::endl;
+  std::cout << "\tUsing Device " << gpuNum << ": " << getCurrentDeviceName() << "\n" << std::endl;
 }
 
 double CudaSieve::elapsedTime()
@@ -153,7 +185,7 @@ void CudaSieve::copyAndPrint()
 {
   h_primeOut = safeCudaMallocHost(h_primeOut, count*sizeof(uint64_t));
   cudaMemcpy(h_primeOut, d_primeOut, count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
-  for(uint64_t i = 0; i < count; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
+  for(uint64_t i = 0; i < 20; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
 }
 
 void CudaSieve::CLIPrimes()
@@ -170,7 +202,7 @@ uint64_t CudaSieve::countPrimesSegment(uint64_t bottom, uint64_t top, uint16_t g
 {
   this->bottom = bottom;
   this->top = top;
-  this->gpuNum = gpuNum;
+  setGpu(gpuNum);
 
   *KernelData::h_count = 0;
   flags[30] = 1;
@@ -189,7 +221,7 @@ uint64_t * CudaSieve::getHostPrimesSegment(uint64_t bottom, size_t & count, uint
 
   this->bottom = bottom;
   top = bottom + irange;
-  this->gpuNum = gpuNum;
+  setGpu(gpuNum);
 
   flags[30] = 1;
   flags[0] = 1;
@@ -218,7 +250,7 @@ uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, size_t & count, ui
   this->bottom = bottom;
   top = bottom + irange;
   if(top > itop) top = itop;
-  this->gpuNum = gpuNum;
+  setGpu(gpuNum);
 
   flags[30] = 1;
   flags[0] = 1;
@@ -238,9 +270,8 @@ uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, size_t & count, ui
 
 uint64_t CudaSieve::countPrimes(uint64_t top, uint16_t gpuNum)
 {
-  CudaSieve * sieve = new CudaSieve;
+  CudaSieve * sieve = new CudaSieve(gpuNum);
 
-  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->flags[30] = 1;
   sieve->launchCtl();
@@ -254,9 +285,8 @@ uint64_t CudaSieve::countPrimes(uint64_t top, uint16_t gpuNum)
 
 uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
 {
-  CudaSieve * sieve = new CudaSieve;
+  CudaSieve * sieve = new CudaSieve(gpuNum);
 
-  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
@@ -271,9 +301,8 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
 
 uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
-  CudaSieve * sieve = new CudaSieve;
+  CudaSieve * sieve = new CudaSieve(gpuNum);
 
-  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
@@ -296,9 +325,8 @@ uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & coun
 
 std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
-  CudaSieve * sieve = new CudaSieve;
+  CudaSieve * sieve = new CudaSieve(gpuNum);
 
-  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
@@ -325,16 +353,14 @@ std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t t
 
 uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
-  CudaSieve * sieve = new CudaSieve;
+  CudaSieve * sieve = new CudaSieve(gpuNum);
 
-  sieve->gpuNum = gpuNum;
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
   sieve->flags[0] = 1;
   sieve->flags[29] = 1;
   sieve->flags[20] = 1;
-
 
   sieve->launchCtl();
   count = *KernelData::h_count;

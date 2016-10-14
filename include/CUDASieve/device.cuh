@@ -1,10 +1,9 @@
 /*
 
-CUDASieveDevice.cuh
+device.cuh
 
-Contains the __device__ functions and __constant__s for CUDASieve 1.0
-by Curtis Seizert - cseizert@gmail.com
-
+Contains the __device__ functions and __constant__s for CUDASieve
+Curtis Seizert  <cseizert@gmail.com>
 */
 
 #include <stdint.h>
@@ -35,6 +34,7 @@ namespace device
   __device__ void movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime);
   __device__ void movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint64_t * d_primeOut, uint32_t * d_histogram, uint64_t bstart, uint64_t maxPrime);
   __device__ void movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime);
-}
+
+} // namespace device
 
 #endif

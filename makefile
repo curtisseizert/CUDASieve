@@ -20,7 +20,7 @@ CCFLAGS = -O3 -std=c++11 -c
 
 # Flags for nvcc
 # ptxas-options=-dlcm=cg (vs. default of ca) is about a 2% performance gain
-NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --ptxas-options=-dlcm=cs
+NVCC_FLAGS = -ccbin /bin/g++-5 -std=c++11 -arch=$(GPU_ARCH) -code=$(GPU_CODE) --ptxas-options=-dlcm=cs -lineinfo
 
 INCLUDES = -I ./include/ -I ./src/ -I $(CUDA_DIR)/include/
 LIB_DIR = -L ./

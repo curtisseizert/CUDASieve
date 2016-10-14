@@ -1,6 +1,6 @@
 /*
 
-CUDASieveHost.cpp
+host.cpp
 
 Host functions for CUDASieve
 Curtis Seizert - cseizert@gmail.com
@@ -42,7 +42,6 @@ void host::displayAttributes(const BigSieve & bigsieve)
   std::cout << "Size of big sieve\t\t:  " << bigsieve.bigSieveKB << " kb" <<std::endl;
   std::cout << "Bucket arrays filled in\t\t:  " << bigsieve.time_ms << " ms\n" << std::endl;
 }
-
 
 void KernelData::allocate()
 {

@@ -29,6 +29,7 @@
 
 void dispFactors(uint64_t n, bool skipline = 0);
 void mr_check(uint64_t * primes, int64_t numToCheck, size_t len, bool skipline = 0);
+void listDevices();
 
 using namespace boost::multiprecision;
 
@@ -43,20 +44,27 @@ int main()
   boost::random::uniform_int_distribution<> dist_range_count(1,2000000000);
 
   size_t len;
-  uint16_t testNum;
+  uint16_t testNum, gpuNum = 0;
   uint32_t numTrials = 1;
   uint32_t tests_with_error = 0;
   uint64_t bottom;
   uint64_t range;
-
+  do{
   std::cout << "\nTests available:\n\t(1) Count - requires maximum 1.77 GB device memory" << std::endl;
   std::cout << "\t(2) Output - requires maximum  3.33 GB device memory" << std::endl;
   std::cout << "\t(3) Specific Range - Miller-Rabin test of all output primes in range" << std::endl;
-  std::cout << "::Test Number? [1/2/3] ";
+  std::cout << "\t(4) Set CUDA-enabled device number (default 0)" << std::endl;
+  std::cout << "::Selection? [1/2/3/4] ";
   std::cin >> testNum;
+  if(testNum == 4){
+    CudaSieve::listDevices();
+    std::cout << "::Select Device ";
+    std::cin >> gpuNum;
+  }
+}while(testNum == 4);
 
   if(testNum == 1 || testNum == 2){
-    std::cout << "::Number of trials? [1 - 65535] ";
+    std::cout << "::Number of trials? [1 - 9999999] ";
     std::cin >> numTrials;
     std::cout << std::endl;
   }
@@ -86,13 +94,14 @@ int main()
       std::cout << "\t\t\t\t\t\t\t\t" << range << "          \r";
       std::cout << std::flush;
 
-      uint64_t primes = CudaSieve::countPrimes(bottom, top);
+      uint64_t primes = CudaSieve::countPrimes(bottom, top, gpuNum);
       uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
 
       if(primes != numPsPrimes){
         std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
         tests_with_error++;
       }
+      if((i + 1) % 1024 == 0) cudaDeviceReset();
     }
   }
 
@@ -113,7 +122,7 @@ int main()
       std::cout << "\t\t\t\t\t\t\t\t" << range << "                            \r";
       std::cout << std::flush;
 
-      uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len);
+      uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
 
       std::cout << "\t\t\t\t\t\t\t\t\t\t" << len << "          \r";
       std::cout << std::flush;
@@ -133,6 +142,7 @@ int main()
       }
 
       cudaFreeHost(primes);
+      if((i + 1) % 1024 == 0) cudaDeviceReset();
     }
   }
 
@@ -142,9 +152,13 @@ int main()
     uint64_t top = bottom + range;
 
     std::cout << "\tlog2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "          " << std::endl;
-    uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len);
+    uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
     uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
-    if((uint64_t)len != numPsPrimes) std::cout << "Length mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << len << std::endl;
+
+    if((uint64_t) len != numPsPrimes){
+      std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
+      tests_with_error++;
+    }
 
     mr_check(primes, 0, len);
 
@@ -156,6 +170,22 @@ int main()
   if(testNum == 1 || testNum == 2 || testNum ==3)
     std::cout << "Total " << tests_with_error << " errors over " << numTrials << " trials.\n" << std::endl;
   return 0;
+}
+
+void listDevices()
+{
+  int count;
+  cudaGetDeviceCount(&count);
+  std::cout << "\n" << count << " CUDA enabled devices available:" << std::endl;
+
+  for(int i = 0; i < count; i++){
+    std::cout << "\t(" << i << ") : ";
+    cudaSetDevice(i);
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, i);
+    std::cout << prop.name << std::endl;
+  }
+  std::cout << std::endl;
 }
 
 inline void mr_check(uint64_t * primes, int64_t numToCheck, size_t len, bool skipline) // iterative miller rabin check with some safeguards

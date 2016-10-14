@@ -1,6 +1,6 @@
 /*
 
-CUDASieveHost.hpp
+host.hpp
 
 Host functions for CUDASieve
 Curtis Seizert  <cseizert@gmail.com>

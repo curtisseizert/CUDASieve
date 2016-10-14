@@ -1,6 +1,6 @@
 /*
 
-CUDASieveLaunch.cu
+launch.cu
 
 Host functions for CUDASieve which interface with the device
 Curtis Seizert  <cseizert@gmail.com>
@@ -190,7 +190,6 @@ void SmallSieve::count(CudaSieve & sieve)
   cudaDeviceSynchronize();
   timer.stop();
 }
-
 
 void BigSieve::run(CudaSieve & sieve) // coordinates the functions of this class for the CLI
 {

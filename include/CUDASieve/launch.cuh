@@ -1,9 +1,9 @@
 /*
 
-CUDASieveLaunch.cuh
+launch.cuh
 
 Host functions for CUDASieve which interface with the device
-Curtis Seizert - cseizert@gmail.com
+Curtis Seizert  <cseizert@gmail.com>
 
 The naming convention for sieve sizes:
  sieveWords == number of 32-bit integers in the array

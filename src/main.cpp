@@ -1,9 +1,9 @@
 /*
 
-CUDASieveMain.cu
+main.cpp
 
 Source for main for CUDASieve
-by Curtis Seizert - cseizert@gmail.com
+Curtis Seizert <cseizert@gmail.com>
 
 */
 
@@ -63,12 +63,17 @@ void host::parseOptions(int argc, char* argv[], CudaSieve * sieve)
     if(arg == "--profile") // enable profiling by nvprof
       sieve->setFlagOn(17);
 
+    if(arg == "-l" || arg == "--list"){ // list devices then exit
+      CudaSieve::listDevices();
+      sieve->setFlagOn(31);
+    }
+
     if(i + 1 <= argc){
       if(arg == "-t")           sieve->top = echo(argv[i+1]);
       if(arg == "-b")           sieve->bottom = echo(argv[i+1]);
       if(arg == "-bs"){         sieve->setBigSieveKB(echo(argv[i+1]));
                                 sieve->setFlagOn(18);}
-      if(arg == "-g")           sieve->setGpuNum(atoi(argv[i+1]));
+      if(arg == "-g")           sieve->setGpu(atoi(argv[i+1]));
       if(arg == "-sievekb")     sieve->setSieveKB(atoi(argv[i+1]));
       if(arg == "-partial")     sieve->setMaxPrime(atoi(argv[i+1]));
 
@@ -92,11 +97,11 @@ void host::help()
   //printf("\t-sievekb\tSet size in kb of the small Smem sieve (default 16).\n"); // this causes inaccuracies and bugs
   printf("\t-bs\t\tSet the block size in kb of the large number sieve.\n");
   printf("\t-g\t\tSet the (cuda) GPU number (default 0).\n");
-  printf("\n\tExamples\n");
-  printf("CUDASieve -b 2**50-2**30 -t 2**50+2**30 -s\n");
-  printf("CUDASieve -t 4685215875\n");
-  printf("CUDASieve -b 2**64-2**35-2**30 -t 2**64-2**35 -p\n");
-  printf("\t\nGood Luck!\n\n");
+  printf("\t-l --list\tList the available CUDA enabled devices.\n");
+  printf("\n\t===Examples===\n");
+  printf("cudasieve -b 2**50-2**30 -t 2**50+2**30 -s\n");
+  printf("cudasieve -t 4685215875\n");
+  printf("cudasieve -b 2**64-2**35-2**30 -t 2**64-2**35 -p\n\n");
 }
 
 uint64_t host::echo(char * argv) // for getting values bigger than the 32 bits that system() will return;

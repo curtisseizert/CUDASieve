@@ -1,10 +1,9 @@
 /*
 
-CUDASieveGlobal.cuh
+global.cuh
 
-Contains the __global__ functions in the device code for CUDASieve 1.0
-by Curtis Seizert - cseizert@gmail.com
-
+Contains the __global__ functions in the device code for CUDASieve
+Curtis Seizert  <cseizert@gmail.com>
 */
 
 #include <stdint.h>
