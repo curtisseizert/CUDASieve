@@ -99,7 +99,6 @@ uint64_t countPrimes(uint64_t top);
 /* Returns count from bottom to top, caveats mentioned below apply */
 uint64_t countPrimes(uint64_t bottom, uint64_t top);
 
-/********* range must be a multiple of 2^24 *********/
 /* Returns pointer to a page-locked host array of the primes in [bottom, top] of length count.
    Memory must be freed with cudaFreeHost() */
 uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & count);
@@ -148,10 +147,12 @@ The above code creates a CudaSieve object with an appropriate list of sieving pr
 ```
 <br>
 
-Limitations
+Issues
 ------------
-When printing primes (or getting poiners to arrays of primes), the bottom of the range must be a multiple of 64, and the size of the range must be a multiple of 2<sup>24</sup> (2<sup>26</sup> over 2<sup>63</sup>).  There is also a device memory leak of ~150 kb that can become problematic after several thousand iterations when using the functions described above, but it is of no consequence for the CLI.
+There is also a device memory leak of ~150 kb that can become problematic after several thousand iterations when using the functions described above, but it is of no consequence for the CLI.  Strangely, it doesn't seem to be a result of cudaMalloc() / cudaFree() asymmetry, nor is it detected with cuda-memcheck...  Anyways, if you need to run several thousand or more iterations of one of the above functions, it seems best to call cudaDeviceReset() after every 1000 or so.  When called this infrequently, cudaDeviceReset() adds negligible time.
+
+There is an issue with selecting the non-default GPU in the CLI that causes timing to fail and counts to sometimes be off.  However, this limitation does not carry over to the API, where selecting the non-default GPU does not cause problems.
 
 State of the Project
 -------------------
-I am continuing verification tests and working out copying primes without any range limitations.  Let me know if you have any requests for features, and I'll see what I can do.
+Currently working on expanding the range of available API functions, specifically the non-static ones.  Let me know if you have any requests for features, and I'll see what I can do.
