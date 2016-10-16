@@ -31,9 +31,12 @@ namespace device
   __device__ void inclusiveScan(uint32_t * d_array, uint32_t size);
   __device__ void exclusiveScan(uint16_t * s_array, uint32_t size);
   __device__ void exclusiveScanBig(uint32_t * s_array, uint32_t size);
-  __device__ void movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime);
-  __device__ void movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint64_t * d_primeOut, uint32_t * d_histogram, uint64_t bstart, uint64_t maxPrime);
-  __device__ void movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime);
+  __device__ void movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, volatile uint64_t * d_count, uint64_t bstart, uint32_t maxPrime);
+
+
+  template <typename T>
+  __device__ void movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords,
+    T * d_primeOut, uint32_t * d_histogram, uint64_t bstart, T maxPrime);
 
 } // namespace device
 

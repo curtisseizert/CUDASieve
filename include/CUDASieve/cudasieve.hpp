@@ -52,9 +52,9 @@ inline void safeCudaFreeHost(T * array) {if(array != NULL){cudaFreeHost(array); 
 template <typename T>
 inline T * safeCudaMalloc(T * d_a, size_t size)
 {
-  if(!d_a){
+  if(d_a == NULL){
     if(cudaMalloc(&d_a, size) != cudaSuccess){
-      std::cerr << "CUDA device memory allocation error: CUDA API error " << cudaMalloc(&d_a, size) << std::endl;
+      std::cerr << "\nCUDA device memory allocation error: CUDA API error " << cudaMalloc(&d_a, size) << std::endl;
       std::cerr << "for attempted allocation of size " << size << " at " << &d_a << std::endl;
       exit(1);
     }
@@ -65,7 +65,7 @@ inline T * safeCudaMalloc(T * d_a, size_t size)
 template <typename T>
 inline T * safeCudaMallocHost(T * h_a, size_t size)
 {
-  if(!h_a){
+  if(h_a == NULL){
     if(cudaMallocHost(&h_a, size) != cudaSuccess){
       std::cerr << "CUDA host memory allocation error: CUDA API error " << cudaMalloc(&h_a, size) << std::endl;
       exit(1);
@@ -100,6 +100,7 @@ private:
 
   BigSieve bigsieve;
   SmallSieve smallsieve;
+  KernelData kerneldata;
 
   uint64_t getBottom(){return bottom;}
   uint64_t getTop(){return top;}
@@ -156,8 +157,8 @@ public:
   static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
 
   uint64_t countPrimesSegment(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
-  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum = 0);
-  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count, uint16_t gpuNum = 0);
+  uint64_t * getHostPrimesSegment(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum);
+  uint64_t * getDevicePrimesSegment(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum);
 
   uint32_t * getBitSieve();
 

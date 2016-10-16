@@ -70,9 +70,9 @@ int main()
   }
 
   if(testNum == 3){
-    std::cout << "::Bottom of range? [multiples of 64] ";
+    std::cout << "::Bottom of range? ";
     std::cin >> bottom;
-    std::cout << "::Range to check? [multiples of 2^26] ";
+    std::cout << "::Range to check? ";
     std::cin >> range;
   }
 
@@ -132,7 +132,7 @@ int main()
 
 
       if((uint64_t) len != numPsPrimes){
-        std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
+        std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << len << std::endl;
         tests_with_error++;
       }
       uint32_t fromEnds = std::min(65536u, (unsigned) len);

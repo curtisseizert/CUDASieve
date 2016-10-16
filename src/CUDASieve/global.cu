@@ -39,7 +39,7 @@ Kernel used for creating list of primes on the device with knowledge only of
 3-37.  See device.cu - sieveFirst(...) as well as SmallSieve(...) below.
 */
 
-__global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_histogram,
+__global__ void device::firstPrimeList(uint32_t * d_primeList, volatile uint64_t * d_count,
    uint32_t sieveBits, uint32_t maxPrime)
 {
   uint64_t bidx = blockIdx.x;
@@ -56,31 +56,7 @@ __global__ void device::firstPrimeList(uint32_t * d_primeList, uint32_t * d_hist
   device::countPrimesHist(s_sieve, s_counts, sieveWords);
   __syncthreads();
   device::exclusiveScanBig(s_counts, sieveWords);
-  device::movePrimesFirst(s_sieve, s_counts, sieveWords, d_primeList, d_histogram, bstart, maxPrime);
-}
-
-/*
-Some scan functions for incrementing the various histograms made in order
-to index the primes on the device for creating a list.  There are so many because
-I wanted to cover all my bases without having to be clever enough to efficiently
-package a general solution in a single function.
-*/
-
-__global__ void device::exclusiveScan(uint32_t * d_array, uint32_t size)
-{
-  extern __shared__ uint32_t s_array[];
-  uint32_t tidx = threadIdx.x;
-
-  s_array[tidx] = d_array[tidx];
-  uint32_t sum;
-
-  device::inclusiveScan(s_array, size);
-
-  if(tidx != 0) sum = s_array[tidx-1];
-  else sum = 0;
-  __syncthreads();
-  s_array[tidx] = sum;
-  d_array[tidx] = s_array[threadIdx.x];
+  device::movePrimesFirst(s_sieve, s_counts, sieveWords, d_primeList, d_count, bstart, maxPrime);
 }
 
 __global__ void device::exclusiveScan(uint32_t * d_array, uint32_t * d_totals, uint32_t size)
@@ -131,66 +107,6 @@ __global__ void device::increment(uint32_t * d_array, uint32_t * d_totals, uint3
   uint32_t increment = d_totals[blockIdx.x];
 
   if(tidx < arr_size) d_array[tidx+block_offset] += increment;
-}
-
-/*
-The same as a small sieve but moves the count to an array rather than to a single
-data point.
-*/
-
-__global__ void device::makeHistogram(uint32_t * d_primeList, uint32_t * d_histogram,
-   uint32_t sieveBits, uint32_t primeListLength)
-{
-  uint64_t bidx = blockIdx.x;
-  uint32_t sieveWords = sieveBits/32;
-  __shared__ uint32_t s_sieve[256];
-  uint64_t bstart = bidx*sieveBits*2;
-
-  float pstop = sqrtf(bstart + 2*sieveBits);
-  unsigned int piHighGuess = (pstop/log(pstop))*(1+1.2762/log(pstop));
-  primeListLength = min((unsigned int) primeListLength, piHighGuess);
-
-  device::sieveInit(s_sieve, sieveWords);
-  device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
-  __syncthreads();
-  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits, 1);
-  else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
-  __syncthreads();
-  device::countPrimes(s_sieve, sieveWords);
-  __syncthreads();
-  device::moveCountHist(s_sieve, d_histogram);
-}
-
-/*
-Uses the indexing data generated in the other kernels to place the primes
-in an array rather than simply counting them.  Note that this kernel requires
-that all the primes have been sieved and counted previously and then sieves them
-again :-/
-*/
-
-__global__ void device::makePrimeList(uint32_t * d_primeList, uint32_t * d_histogram,
-   uint32_t sieveBits, uint32_t primeListLength, uint32_t maxPrime)
-{
-  uint64_t bidx = blockIdx.x;
-  uint32_t sieveWords = sieveBits/32;
-  __shared__ uint32_t s_sieve[256];
-  __shared__ uint16_t s_counts[256];
-  uint64_t bstart = bidx*sieveBits*2;
-
-  float pstop = sqrtf(bstart + 2*sieveBits);
-  unsigned int piHighGuess = (pstop/log(pstop))*(1+1.2762/log(pstop));
-  primeListLength = min((unsigned int) primeListLength, piHighGuess);
-
-  device::sieveInit(s_sieve, sieveWords);
-  device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
-  __syncthreads();
-  if(bstart == 0) device::sieveMedPrimesBase(s_sieve, d_primeList, bstart, primeListLength, sieveBits, 1);
-  else device::sieveMedPrimes(s_sieve, d_primeList, bstart, primeListLength, sieveBits);
-  __syncthreads();
-  device::countPrimes(s_sieve, s_counts, sieveWords);
-  __syncthreads();
-  device::exclusiveScan(s_counts, sieveWords);
-  device::movePrimes(s_sieve, s_counts, sieveWords, d_primeList, d_histogram, bstart, maxPrime);
 }
 
 /*
@@ -472,8 +388,9 @@ __global__ void device::makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_
   device::moveCountHist(s_sieve, d_histogram);
 }
 
-__global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_histogram,
-   uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime)
+template <typename T>
+__global__ void device::makePrimeList_PLout(T * d_primeOut, uint32_t * d_histogram,
+   uint32_t * d_bigSieve, uint64_t bottom, T maxPrime)
 {
   uint32_t sieveWords = 256;
   __shared__ uint32_t s_sieve[256];
@@ -487,4 +404,10 @@ __global__ void device::makePrimeList_PLout(uint64_t * d_primeOut, uint32_t * d_
   device::exclusiveScan(s_counts, sieveWords);
   __syncthreads();
   device::movePrimes(s_sieve, s_counts, sieveWords, d_primeOut, d_histogram, bstart, maxPrime);
+  d_bigSieve[256*blockIdx.x + threadIdx.x] = 0;
 }
+
+template __global__ void device::makePrimeList_PLout<uint64_t>(uint64_t * d_primeOut,
+   uint32_t * d_histogram, uint32_t * d_bigSieve, uint64_t bottom, uint64_t maxPrime);
+template __global__ void device::makePrimeList_PLout<uint32_t>(uint32_t * d_primeOut,
+   uint32_t * d_histogram, uint32_t * d_bigSieve, uint64_t bottom, uint32_t maxPrime);

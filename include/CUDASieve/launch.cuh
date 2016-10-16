@@ -53,7 +53,7 @@ private:
   uint16_t threads;
   uint64_t numGuess;
   void allocateDevice();
-  void fetch(BigSieve & sieve, uint64_t * d_primeOut);
+  void fetch(BigSieve & bigsieve, CudaSieve & sieve);
   void fetchPartial(BigSieve & sieve, uint64_t * d_primeOut);
   void fetch();
 
@@ -69,20 +69,22 @@ class PrimeList{
 
 private:
   KernelTime timer;
-  uint32_t * h_primeListLength = NULL, * d_histogram = NULL, * d_histogram_lg = NULL, * d_primeListLength = NULL;
-  uint32_t hist_size_lg, piHighGuess, PL_Max, maxPrime, blocks;
-  uint16_t threads;
-  uint32_t * d_primeList = NULL;
+  uint32_t primeListLength, * d_histogram = NULL, * d_histogram_lg = NULL, * d_primeListLength = NULL;
+  uint32_t hist_size_lg, piHighGuess, PL_Max, maxPrime, blocks, * d_primeList = NULL, * d_bigSieve = NULL, bigSieveKB = 1024;
+  uint16_t threads,sieveKB = 16;
+
+  KernelData kerneldata;
 
   uint32_t * getPtr(){return d_primeList;}
   void sievePrimeList();
+  void iterSieve();
   void allocate();
 
   PrimeList(uint32_t maxPrime);
 public:
 
   ~PrimeList();
-  static uint32_t * getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLength, bool silent);
+  static uint32_t * getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLength, bool silent = 1);
 
 };
 
@@ -132,13 +134,12 @@ private:
   void allocate();
   void fillNextMult();
 
-  void launchLoop();
-  void launchLoop(uint64_t bottom, uint64_t top);
+  void launchLoop(CudaSieve & sieve);
   void launchLoopCopy(CudaSieve & sieve);
   void launchLoopPrimes(CudaSieve & sieve);
   void launchLoopPrimesSmall(CudaSieve & sieve);
 
-  void countPartialTop();
+  void countPartialTop(CudaSieve & sieve);
 
 public:
   static void run(CudaSieve & sieve);

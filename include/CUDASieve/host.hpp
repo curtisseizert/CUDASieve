@@ -35,18 +35,19 @@ class KernelData{
   friend class SmallSieve;
   friend class PrimeOutList;
   friend class CudaSieve;
+  friend class PrimeList;
 private:
-  static volatile uint64_t * h_count, * h_blocksComplete;
-  static volatile uint64_t * d_count, * d_blocksComplete;
+  volatile uint64_t * h_count, * h_blocksComplete;
+  volatile uint64_t * d_count, * d_blocksComplete;
 public:
-  static uint64_t getCount(){return * h_count;}
-  static uint64_t getBlocks(){return * h_blocksComplete;}
+  uint64_t getCount(){return * h_count;}
+  uint64_t getBlocks(){return * h_blocksComplete;}
 
-  static void displayProgress(uint64_t totBlocks);
-  static void displayProgress(uint64_t value, uint64_t totIter);
+  void displayProgress(uint64_t totBlocks);
+  void displayProgress(uint64_t value, uint64_t totIter);
 
-  static void allocate();
-  static void deallocate();
+  void allocate();
+  void deallocate();
 
   KernelData(){};
   ~KernelData(){};

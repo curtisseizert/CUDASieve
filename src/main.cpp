@@ -36,7 +36,6 @@ int main(int argc, char* argv[])
 
   if(!sieve->isFlag(30)) printf("\t%f seconds elapsed.\n", sieve->elapsedTime());
 
-  delete sieve;
   cudaDeviceReset();
   return 0;
 }

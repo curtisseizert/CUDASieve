@@ -15,10 +15,10 @@ Curtis Seizert - cseizert@gmail.com
 #include <stdio.h>
 
 
-volatile uint64_t * KernelData::h_count;
-volatile uint64_t * KernelData::h_blocksComplete;
-volatile uint64_t * KernelData::d_count;
-volatile uint64_t * KernelData::d_blocksComplete;
+// volatile uint64_t * KernelData::h_count;
+// volatile uint64_t * KernelData::h_blocksComplete;
+// volatile uint64_t * KernelData::d_count;
+// volatile uint64_t * KernelData::d_blocksComplete;
 
 
 void host::displayAttributes(CudaSieve & sieve)
@@ -45,20 +45,20 @@ void host::displayAttributes(const BigSieve & bigsieve)
 
 void KernelData::allocate()
 {
-  cudaHostAlloc((void **)&KernelData::h_count, sizeof(uint64_t), cudaHostAllocMapped);
-  cudaHostAlloc((void **)&KernelData::h_blocksComplete, sizeof(uint64_t), cudaHostAllocMapped);
+  cudaHostAlloc((void **)&h_count, sizeof(uint64_t), cudaHostAllocMapped);
+  cudaHostAlloc((void **)&h_blocksComplete, sizeof(uint64_t), cudaHostAllocMapped);
 
-  cudaHostGetDevicePointer((unsigned long **)&d_count, (unsigned long *)KernelData::h_count, 0);
-  cudaHostGetDevicePointer((unsigned long **)&d_blocksComplete, (unsigned long *)KernelData::h_blocksComplete, 0);
+  cudaHostGetDevicePointer((unsigned long **)&d_count, (unsigned long *)h_count, 0);
+  cudaHostGetDevicePointer((unsigned long **)&d_blocksComplete, (unsigned long *)h_blocksComplete, 0);
 
-  *KernelData::h_count = 0;
-  *KernelData::h_blocksComplete = 0;
+  *h_count = 0;
+  *h_blocksComplete = 0;
 }
 
 void KernelData::deallocate()
 {
-  cudaFreeHost((void *)KernelData::h_count);
-  cudaFreeHost((void *)KernelData::h_blocksComplete);
+  cudaFreeHost((void *)h_count);
+  cudaFreeHost((void *)h_blocksComplete);
 }
 
 void KernelData::displayProgress(uint64_t totBlocks)
@@ -67,23 +67,23 @@ void KernelData::displayProgress(uint64_t totBlocks)
     uint64_t value = 0;
     uint64_t counter = 0;
     do{
-      uint64_t value1 = * KernelData::h_blocksComplete;
-      counter = * KernelData::h_count;
+      uint64_t value1 = * h_blocksComplete;
+      counter = * h_count;
       if (value1 > value){
         std::cout << "\t" << (100*value/totBlocks) << "% complete\t\t" << counter << " primes counted.\r";
         std::cout.flush();
          value = value1;
        }
     }while (value < totBlocks);
-    counter = * KernelData::h_count;
+    counter = * h_count;
   }
   cudaDeviceSynchronize();
-  std::cout << "\t" << "100% complete\t\t" << * KernelData::h_count << " primes counted.\r";
+  std::cout << "\t" << "100% complete\t\t" << * h_count << " primes counted.\r";
 }
 
 void KernelData::displayProgress(uint64_t value, uint64_t totIter)
 {
-  std::cout << "\t" << (100*value/totIter) << "% complete\t\t" << *KernelData::h_count << " primes counted.\r";
+  std::cout << "\t" << (100*value/totIter) << "% complete\t\t" << *h_count << " primes counted.\r";
   std::cout.flush();
 }
 

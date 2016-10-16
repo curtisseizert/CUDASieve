@@ -10,7 +10,6 @@ by Curtis Seizert <cseizert@gmail.com>
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "CUDASieve/global.cuh"
 #include "CUDASieve/device.cuh"
 
 /*
@@ -389,33 +388,8 @@ primelist generation with the 32 bit version.  This may change when the big siev
 gets support for better range granularity.
 */
 
-
-__device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime)
-{
-   // this is meant for when words per array == number of threads
-  uint16_t i = threadIdx.x;
-  uint16_t c = 0;
-  uint32_t s = ~s_sieve[i];
-  uint32_t idx = d_histogram[blockIdx.x] + s_counts[i];
-  __syncthreads();
-  if(threadIdx.x == 0) s_sieve[0] |= ~s_sieve[0];
-  for(uint16_t j = 0; j < 32; j++){
-    if(1 & (s >> j)){
-      uint32_t p = bstart + 64*i + 2*j + 1;
-      if(p > maxPrime) {atomicMin(&s_sieve[0], idx+c); break;}
-      else d_primeList[idx+c] = p;
-      c++;
-    }
-  }
-
-  __syncthreads();
-  if(threadIdx.x == blockDim.x-1){
-    if(~s_sieve[0] != 0) d_histogram[blockIdx.x] = s_sieve[0];
-    else d_histogram[blockIdx.x] = idx + c;
-  }
-}
-
-__device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, uint64_t * d_primeOut, uint32_t * d_histogram, uint64_t bstart, uint64_t maxPrime)
+template <typename T>
+__device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint32_t sieveWords, T * d_primeOut, uint32_t * d_histogram, uint64_t bstart, T maxPrime)
 {
    // this is meant for when words per array == number of threads
   uint16_t i = threadIdx.x;
@@ -426,7 +400,7 @@ __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts, uint
   if(threadIdx.x == 0) s_sieve[0] |= ~s_sieve[0]; // s_sieve[0] is made ~0 so we can tell if it has been changed
   for(uint16_t j = 0; j < 32; j++){
     if(1 & (s >> j)){                              // if prime
-      uint64_t p = bstart + 64*i + 2*j + 1;        // calculate value
+      T p = bstart + 64*i + 2*j + 1;        // calculate value
       if(p > maxPrime) {atomicMin(&s_sieve[0], idx+c); break;} // if value is above threshold, submit and break
       else d_primeOut[idx+c] = p; // otherwise copy p to the output array
       c++;                        // incrememnt count
@@ -448,7 +422,7 @@ above versions of the function, it supports array sizes greater than the number 
 threads in the block.  I could probably get rid of one of the above.
 */
 
-__device__ void device::movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, uint32_t * d_histogram, uint64_t bstart, uint32_t maxPrime)
+__device__ void device::movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords, uint32_t * d_primeList, volatile uint64_t * d_count, uint64_t bstart, uint32_t maxPrime)
 {
    // this is for when words per array != number of threads
    uint16_t c;
@@ -467,6 +441,6 @@ __device__ void device::movePrimesFirst(uint32_t * s_sieve, uint32_t * s_counts,
     }
   }
   __syncthreads();
-  if(threadIdx.x == 0 && ~s_sieve[0] != 0) d_histogram[0] = s_sieve[0];
-  if((threadIdx.x == blockDim.x - 1) && ~s_sieve[0] == 0) d_histogram[0] = c;
+  if(threadIdx.x == 0 && ~s_sieve[0] != 0) atomicAdd((unsigned long long *)d_count, s_sieve[0] );//d_count = (uint64_t) s_sieve[0];
+  if((threadIdx.x == blockDim.x - 1) && ~s_sieve[0] == 0) atomicAdd((unsigned long long *)d_count, c);//d_count = (uint64_t) c;
 }
