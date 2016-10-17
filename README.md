@@ -23,7 +23,7 @@ Benchmarks
 <tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.128 ms</td><td> 31.7 ms</td><td> 0.120 s</td><td> 38 726 266</td></tr>  
 <tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.771 ms</td><td> 33.5 ms</td><td> 0.127 s</td><td> 30 984 665</td></tr>  
 <tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 19.4 ms</td><td> 126 ms</td><td> 0.243 s </td><td> 25 818 737</td></tr>
-<tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 50 ms</td><td> 227 ms</td><td> 0.443 s </td><td> 24 201 154</td></tr></table>
+<tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 50.3 ms</td><td> 227 ms</td><td> 0.443 s </td><td> 24 201 154</td></tr></table>
 <p>*Separate sieves for <2<sup>40</sup> and >=2<sup>40</sup></p>
 <br>
 
