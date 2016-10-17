@@ -23,7 +23,7 @@ Benchmarks
 <tr><td> 2<sup>40</sup> to 2<sup>40</sup> + 2<sup>30</sup></td><td> 0.128 ms</td><td> 31.7 ms</td><td> 0.120 s</td><td> 38 726 266</td></tr>  
 <tr><td> 2<sup>50</sup> to 2<sup>50</sup> + 2<sup>30</sup></td><td> 0.771 ms</td><td> 33.5 ms</td><td> 0.127 s</td><td> 30 984 665</td></tr>  
 <tr><td> 2<sup>60</sup> to 2<sup>60</sup> + 2<sup>30</sup></td><td> 19.4 ms</td><td> 126 ms</td><td> 0.243 s </td><td> 25 818 737</td></tr>
-<tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 97 ms</td><td> 225 ms</td><td> 0.480 s </td><td> 24 201 154</td></tr></table>
+<tr><td> 2<sup>64</sup> - 2<sup>36</sup> to 2<sup>64</sup> - 2<sup>36</sup> + 2<sup>30</sup></td><td> 50 ms</td><td> 227 ms</td><td> 0.443 s </td><td> 24 201 154</td></tr></table>
 <p>*Separate sieves for <2<sup>40</sup> and >=2<sup>40</sup></p>
 <br>
 
@@ -38,7 +38,7 @@ Benchmarks
 
 Additionally, this code contains a way of generating a
  list of sieving primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
-  Generating the list of 189 961 800 primes from 38 to 4e9 takes just 89 ms.  This is about 8.3 GB of primes/second.  Primes
+  Generating the list of 189 961 800 primes from 38 to 4e9 takes just 50 ms.  This is about 15.2 GB of primes/second!  Primes
   are also prepared to be printed in the same way.  For example, the kernel time for preparing an array of all the (25 818 737) primes from 2<sup>60</sup> to 2<sup>60</sup>+2<sup>30</sup> and getting this array to the host is 157 ms with the GTX 1080.
   
   This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
