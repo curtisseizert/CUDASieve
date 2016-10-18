@@ -116,9 +116,9 @@ first list takes only 0.1 ms even on the relatively weak GTX 750.
 */
 
 
-__device__ void device::sieveFirst(uint32_t * s_sieve, uint32_t sieveBits)
+__device__ void device::sieveFirstBottom(uint32_t * s_sieve, uint32_t sieveBits)
 {
-  if(threadIdx.x == 0) atomicOr(&s_sieve[0], 1u);
+  if(threadIdx.x == 0 && blockIdx.x == 0) atomicOr(&s_sieve[0], 1u);
   uint32_t p = 41 + 2*threadIdx.x;
   uint32_t off = p * p/2;
   for(; off < sieveBits; off += p) atomicOr(&s_sieve[off >> 5], (1u << (off & 31)));

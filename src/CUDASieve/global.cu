@@ -51,13 +51,14 @@ __global__ void device::firstPrimeList(uint32_t * d_primeList, volatile uint64_t
   device::sieveInit(s_sieve, sieveWords);
   device::sieveSmallPrimes(s_sieve, sieveWords, bstart);
   __syncthreads();
-  device::sieveFirst(s_sieve, sieveBits);
+  device::sieveFirstBottom(s_sieve, sieveBits);
   __syncthreads();
   device::countPrimesHist(s_sieve, s_counts, sieveWords);
   __syncthreads();
   device::exclusiveScanBig(s_counts, sieveWords);
   device::movePrimesFirst(s_sieve, s_counts, sieveWords, d_primeList, d_count, bstart, maxPrime);
 }
+
 
 __global__ void device::exclusiveScan(uint32_t * d_array, uint32_t * d_totals, uint32_t size)
 {
@@ -356,6 +357,19 @@ __global__ void device::zeroBottomWord(uint32_t * d_bigSieve, uint64_t bottom, u
   uint32_t mask = (1u << remBits) -1;
 
   d_bigSieve[0] |= mask;
+}
+
+__global__ void device::zeroPrimeList(uint32_t * d_bigSieve, uint64_t bottom, uint32_t * d_primeList, uint32_t primeListLength)
+{
+  for(uint32_t i = threadIdx.x; i < primeListLength; i += blockDim.x)
+  {
+    uint32_t p = d_primeList[i];
+    if(p >= bottom){
+      uint32_t idx = (p - bottom)/64;
+      uint16_t sidx = ((p - bottom)%64)/2;
+      atomicAnd(&d_bigSieve[idx], ~(1u << sidx));
+    }
+  }
 }
 
 /*

@@ -26,22 +26,22 @@
 #include <omp.h>
 #include <primesieve.h>
 #include <vector>
-
-void dispFactors(uint64_t n, bool skipline = 0);
-void mr_check(uint64_t * primes, int64_t numToCheck, size_t len, bool skipline = 0);
-void listDevices();
+#include "CUDASieve/cstest.hpp"
 
 using namespace boost::multiprecision;
 
 int main()
 {
-  boost::random::ranlux48_base rng1;
-  boost::random::lagged_fibonacci44497 rng2;
-  boost::random::mt19937 rng3;
+  boost::random::ranlux48_base rng3;
+  boost::random::lagged_fibonacci44497 rng1;
+  boost::random::mt19937 rng2;
   boost::random::uniform_int_distribution<> dist(0,225726412); // 2^27.5 (to account for top of range below 2^64)
   boost::random::uniform_int_distribution<> dist_exp(1,36);
+  boost::random::uniform_int_distribution<> dist_exp_range(2,25);
   boost::random::uniform_int_distribution<> dist_bool(0,1);
-  boost::random::uniform_int_distribution<> dist_range_count(1,2000000000);
+  boost::random::uniform_int_distribution<> dist_range_count(12,2000000000);
+  boost::random::uniform_int_distribution<> dist_range_small(1024,65536);
+  boost::random::uniform_int_distribution<> dist_range_test(16,128);
 
   size_t len;
   uint16_t testNum, gpuNum = 0;
@@ -83,13 +83,13 @@ int main()
 
     for(uint32_t i = 0; i < numTrials; i++){
 
-      if(dist_bool(rng1)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
+      if(!dist_bool(rng3)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
       else                bottom = 1 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
 
       range = ((unsigned long)dist_range_count(rng3));
       uint64_t top = bottom + range;
 
-      std::cout << "                                                                                                                       \r";
+      std::cout << "                                                                                                            \r";
       std::cout << "\t" << tests_with_error << "\t" << i+1 << "\t" << log2(bottom) << "\t\t" << bottom << "\r";
       std::cout << "\t\t\t\t\t\t\t\t" << range << "          \r";
       std::cout << std::flush;
@@ -112,9 +112,9 @@ int main()
 
     for(uint32_t i = 0; i < numTrials; i++){
 
-      if(dist_bool(rng1)) bottom = (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
-      else                bottom = (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
-      range = ((unsigned long)dist_range_count(rng1));
+      if(dist_bool(rng3)) bottom = (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng1)) - 1);
+      else                bottom = (uint64_t )dist(rng3) * (pow(2,(int)dist_exp(rng2)) - 1);
+      range = ((unsigned long)dist_range_test(rng3) * pow(2,(int)dist_exp_range(rng1)) - 1);
       uint64_t top = bottom + range;
 
       std::cout << "                                                                                                                       \r";
@@ -152,17 +152,89 @@ int main()
     uint64_t top = bottom + range;
 
     std::cout << "\tlog2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "          " << std::endl;
-    uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
+    uint64_t * primes;// = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
     uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
 
-    if((uint64_t) len != numPsPrimes){
-      std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
-      tests_with_error++;
+    for(uint16_t i = 0; i < 128; i++){
+      primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
+      cudaFreeHost(primes);
+      if((uint64_t) len != numPsPrimes){
+        std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
+        tests_with_error++;
+      }
     }
+
+    primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
 
     mr_check(primes, 0, len);
 
     cudaFreeHost(primes);
+  }
+
+  if(testNum == 5){
+
+    numGuess * guess1 = new numGuess(1);
+    numGuess * guess2 = new numGuess(2);
+    numGuess * guess3 = new numGuess(3);
+    numGuess * guess4 = new numGuess(4);
+    numGuess * guess5 = new numGuess(5);
+
+    numTrials = 16384;
+    std::cout << std::endl;
+    std::cout << "\tTrial\tlog2(bottom)\tbottom\t\t\trange" << std::endl;
+    std::cout << "\t===========================================================" << std::endl;
+
+    for(uint32_t i = 0; i < numTrials; i++){
+
+      if(dist_bool(rng1)) bottom = (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng3)) - 1);
+      else                bottom = (uint64_t )dist(rng3) * (pow(2,(int)dist_exp(rng2)) - 1);
+      range = ((unsigned long)dist_range_test(rng2) * pow(2,(int)dist_exp_range(rng2)) - 1);
+      // range = ((unsigned long)dist_range_small(rng2));
+      uint64_t top = bottom + range;
+
+      std::cout << "                                                                                                                       \r";
+      std::cout << "\t" << i+1 << "\t" << log2(bottom) << "\t\t" << bottom << "\r";
+      std::cout << "\t\t\t\t\t\t\t" << range << "                            \r";
+      std::cout << std::flush;
+
+      uint32_t g1 = ((1 + 2/log(top-bottom)) * (top - bottom)/log(bottom)) + 32;
+      uint32_t g2 = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 96*log(top-bottom);
+      uint32_t g3 = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 128*log(top-bottom);
+      uint32_t g4 = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 160*log(top-bottom);
+      uint32_t g5 = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 192*log(top-bottom);
+      uint32_t g6 = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 256*log(top-bottom);
+
+      guess1->guess = g1;
+      guess2->guess = g1;
+      guess3->guess = g1;
+      guess4->guess = g1;
+      guess5->guess = g1;
+
+      if(range > 32768){
+        guess1->guess = g2;
+        guess2->guess = g3;
+        guess3->guess = g4;
+        guess4->guess = g5;
+        guess5->guess = g6;
+      }
+
+      uint64_t primes = CudaSieve::countPrimes(bottom, top, gpuNum);
+
+      guess1->updateStats(primes, bottom, top);
+      guess2->updateStats(primes, bottom, top);
+      guess3->updateStats(primes, bottom, top);
+      guess4->updateStats(primes, bottom, top);
+      guess5->updateStats(primes, bottom, top);
+
+      if((i + 1) % 1024 == 0) cudaDeviceReset();
+    }
+
+    std::cout << "\n" <<  std::endl;
+    guess1->displayStats(numTrials);
+    guess2->displayStats(numTrials);
+    guess3->displayStats(numTrials);
+    guess4->displayStats(numTrials);
+    guess5->displayStats(numTrials);
   }
 
 
@@ -185,7 +257,6 @@ void listDevices()
     cudaGetDeviceProperties(&prop, i);
     std::cout << prop.name << std::endl;
   }
-  std::cout << std::endl;
 }
 
 inline void mr_check(uint64_t * primes, int64_t numToCheck, size_t len, bool skipline) // iterative miller rabin check with some safeguards

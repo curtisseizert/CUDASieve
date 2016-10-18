@@ -103,7 +103,7 @@ uint32_t * PrimeList::getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLe
 PrimeList::PrimeList(uint32_t maxPrime)
 {
   this -> maxPrime = maxPrime;
-
+  if(maxPrime < pow(2,22)) bigSieveKB = 256;
   if(maxPrime > pow(2,30)) bigSieveKB = 16384;
   if(maxPrime > pow(2,31)) bigSieveKB = 32768;
 
@@ -141,7 +141,7 @@ void PrimeList::iterSieve() // makes the list of primes on the device and then c
   device::firstPrimeList<<<1, 256>>>(d_primeList, kerneldata.d_count, 32768, PL_Max);
   cudaDeviceSynchronize();
   primeListLength = (uint32_t)* kerneldata.h_count;
-  if(maxPrime > 65536){
+  if(maxPrime > PL_Max){
 
     for(uint64_t bottom = 65536; bottom < maxPrime; bottom += (bigSieveKB << 14)){
 
@@ -400,10 +400,14 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
   timer.start();
 
   for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
-
+;
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB, primeListLength);
 
+    if(bottom < sqrt(top) && bottom != 0){ // these conditionals add <<1% time to sieves
+      cudaDeviceSynchronize();             // taking longer than 1 ms.
+      device::zeroPrimeList<<<1,256,0,stream[1]>>>(d_bigSieve, bottom, d_primeList, primeListLength);
+    }
     if(bottom < cutoff){
       cudaDeviceSynchronize();
       device::zeroBottomWord<<<1,1,0,stream[1]>>>(d_bigSieve, bottom, cutoff);

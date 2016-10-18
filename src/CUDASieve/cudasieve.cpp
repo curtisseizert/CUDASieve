@@ -163,10 +163,9 @@ double CudaSieve::elapsedTime()
 inline void CudaSieve::launchCtl()
 {
   if(flags[0]){
-    uint64_t numGuess = (uint64_t) (top/log(top))*(1+1.32/log(top)) -
-    ((bottom/log(bottom))*(1+1.32/log(bottom)));
-    if(numGuess < 256) numGuess = (2 * (top - bottom)/log(bottom));
-    if(top - bottom < 256) numGuess = (top-bottom)/4;
+    uint64_t numGuess;
+    if(top - bottom > 32768) numGuess = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 256*log(top-bottom);
+    else numGuess = ((1 + 2/log(top-bottom)) * (top - bottom)/log(bottom)) + 32;
     d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
     cudaMemset(d_primeOut, 0, numGuess*sizeof(uint64_t));
   }
@@ -184,7 +183,7 @@ void CudaSieve::copyAndPrint()
 {
   h_primeOut = safeCudaMallocHost(h_primeOut, count*sizeof(uint64_t));
   cudaMemcpy(h_primeOut, d_primeOut, count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
-  //for(uint64_t i = 0; i < 20; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
+  //for(uint64_t i = 0; i < count; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
 }
 
 void CudaSieve::CLIPrimes()

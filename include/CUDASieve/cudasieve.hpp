@@ -54,7 +54,7 @@ inline T * safeCudaMalloc(T * d_a, size_t size)
 {
   if(d_a == NULL){
     if(cudaMalloc(&d_a, size) != cudaSuccess){
-      std::cerr << "\nCUDA device memory allocation error: CUDA API error " << cudaMalloc(&d_a, size) << std::endl;
+      std::cerr << "CUDA device memory allocation error: CUDA API error " << cudaMalloc(&d_a, size) << std::endl;
       std::cerr << "for attempted allocation of size " << size << " at " << &d_a << std::endl;
       exit(1);
     }

@@ -14,7 +14,7 @@ Curtis Seizert  <cseizert@gmail.com>
 namespace device
 {
   __device__ void sieveSmallPrimes(uint32_t * s_sieve, uint32_t sieveWords, uint64_t bstart);
-  __device__ void sieveFirst(uint32_t * s_sieve, uint32_t sieveBits);
+  __device__ void sieveFirstBottom(uint32_t * s_sieve, uint32_t sieveBits);
   __device__ void sieveMiddlePrimes(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart, uint32_t sieveBits);
   __device__ void sieveMedPrimes(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart, uint32_t primeListLength, uint32_t sieveBits);
   __device__ void sieveMedPrimesBase(uint32_t * s_sieve, uint32_t * d_primeList, uint64_t bstart, uint32_t primeListLength, uint32_t sieveBits, bool forPrimeList);

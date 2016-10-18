@@ -29,6 +29,7 @@ namespace device
   __global__ void makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_histogram);
   __global__ void makeHistogram_PLout(uint32_t * d_bigSieve, uint32_t * d_histogram, uint64_t bottom, uint64_t maxPrime);
   __global__ void zeroBottomWord(uint32_t * d_bigSieve, uint64_t bottom, uint64_t cutoff);
+  __global__ void zeroPrimeList(uint32_t * d_bigSieve, uint64_t bottom, uint32_t * d_primeList, uint32_t primeListLength);
 
   template <typename T>
   __global__ void makePrimeList_PLout(T * d_primeOut, uint32_t * d_histogram,
