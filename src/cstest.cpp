@@ -152,19 +152,21 @@ int main()
     uint64_t top = bottom + range;
 
     std::cout << "\tlog2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "          " << std::endl;
-    uint64_t * primes;// = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
     uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
 
-    for(uint16_t i = 0; i < 128; i++){
-      primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
-      cudaFreeHost(primes);
-      if((uint64_t) len != numPsPrimes){
+    for(uint32_t i = 0; i < 1024; i++){
+      uint64_t primes = CudaSieve::countPrimes(bottom, top, gpuNum);
+      std::cout << " Trial " << i+1 << "\r";
+      std::cout << std::flush;
+      if((uint64_t) primes != numPsPrimes){
         std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
         tests_with_error++;
       }
+      if((i + 1) % 1024 == 0) cudaDeviceReset();
     }
 
-    primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
+    std::cout << std::endl;
+    uint64_t * primes = CudaSieve::getHostPrimes(bottom, top, len, gpuNum);
 
     mr_check(primes, 0, len);
 
