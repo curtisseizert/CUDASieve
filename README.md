@@ -2,11 +2,17 @@
 A GPU accelerated C++/CUDA C implementation of the segmented sieve of Eratosthenes
 
 
-CUDASieve is a high performance segmented sieve of Eratosthenes for counting and generating prime numbers on NVidia GPUs.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
+CUDASieve is a high performance segmented sieve of Eratosthenes for counting and generating prime numbers on Nvidia GPUs.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
 algorithm</a> on the GPU.
 While this code is in no way as elegant as that of Kim Walisch's <a href="http://primesieve.org">primesieve</a>, the use of GPU acceleration allows a
-significant speedup.  On the author's hardware, device initialization takes a constant 0.10 seconds regardless of the
-workload, but generation of small ranges (i.e. < 10<sup>10</sup>) is very fast thereafter.<br>
+significant speedup.  For those interested in building CUDASieve from source, the makefile will require changes to CUDA_DIR.  A smaller number of device architectures can be specified depending on your use case, though this has no effect on performance.  Let me know if you have any hangups.
+
+Binaries
+--------
+The available binaries have been compiled for x86-64 linux and Nvidia GPUs with compute capability 3.0 or greater (everything in the past four years).<br>
+<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=libcudasieve.a">libcudasieve.a</a> - the CUDASieve library (see below)<br>
+<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cudasieve">cudasieve</a> - the CUDASieve command line interface (type ```./cudasieve --help``` for commands)<br>
+<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cstest">cstest</a> - a command line utility for testing the correctness of CUDASieve<br>
 
 Benchmarks
 ----------
@@ -48,15 +54,11 @@ task of sieving these large primes does not increase the amount of memory used s
 
 Correctness
 -----------
-CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 80 000 consecutive tests without error.  A subset of these tests can be performed with the 'cstest' binary.
+CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 150 000 consecutive tests without error.  When run concurrently with some other application running on the same device (e.g. folding@home), there appears to be about a 1 in 20000 chance that the count will be off by one.  These errors, however, are not repeatable when the program is running alone, even over 2 million trials.   One million of those were with a device driving a display, so that does not impose a similar liability for error.  These tests can be performed with the 'cstest' binary.
 
-Usability
----------
-
-At this point, the code is barely more than a proof of principle, so I imagine that anyone who is interested in this can
-modify the makefile to their needs (e.g. changing the CUDA_DIR variable and probably specifying fewer microarchitectures)  The include file names have not changed between CUDA 7.5 and 8.0, so this can be built without modifications to the source code (at least in linux) with CUDA 7.5 as well.  Windows support is currently being held up by my unwillingness to deal with the issue of Windows support.
-
-The provided binaries have been compiled for x86_64 linux with the compute capability 3.0 GPU virtual architecture and device code for each real architecture >= 3.0 (hence the size).  The executable 'CUDASieve' may need permissions changed to run.  If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the libcudasieve.a binary (with nvcc).  For example:
+CUDASieve Library
+-----------------
+If the CUDASieve/cudasieve.hpp header is #included, one can make use of several public member functions of the CudaSieve class for e.g. creating host or device arrays of primes by linking the libcudasieve.a binary (with nvcc).  For example:
 
 ```C++
 /* main.cpp */
@@ -136,23 +138,21 @@ int main()
 The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  The relevant functions are:
 ```C++
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range); 
-  // third parameter is only necessary when copying primes
                                                               
-  uint64_t * getHostPrimesSegment(uint64_t bottom, size_t & count);   
-  uint64_t * getDevicePrimesSegment(uint64_t bottom, size_t & count); 
-  // returns a pointer to an array of primes in the
-  // range [bottom, bottom+range] (the latter as specified
-  // when calling the constructor).  Invalid bottom will
+  uint64_t * getHostPrimesSegment(uint64_t bottom, uint64_t top, size_t & count);   
+  uint64_t * getDevicePrimesSegment(uint64_t bottom, uint64_t top, size_t & count); 
+  // returns a pointer to an array of primes in the  range [bottom, bottom+range] 
+  // (the latter as specified when calling the constructor).  Invalid bottom will
   // return NULL and count = 0;
 ```
 <br>
 
 Issues
 ------------
-There is also a device memory leak of ~150 kb that can become problematic after several thousand iterations when using the functions described above, but it is of no consequence for the CLI.  Strangely, it doesn't seem to be a result of cudaMalloc() / cudaFree() asymmetry, nor is it detected with cuda-memcheck...  Anyways, if you need to run several thousand or more iterations of one of the above functions, it seems best to call cudaDeviceReset() after every 1000 or so.  When called this infrequently, cudaDeviceReset() adds negligible time.
+There is a device memory leak of ~150 kb that can become problematic after several thousand iterations when using the functions described above, but it is of no consequence for the CLI.  Strangely, it doesn't seem to be a result of cudaMalloc() / cudaFree() asymmetry, nor is it detected with cuda-memcheck...  Anyways, if you need to run several thousand or more iterations of one of the above functions, it seems best to call cudaDeviceReset() after every 1000 or so.  When called this infrequently, cudaDeviceReset() adds negligible time.
 
 There is an issue with selecting the non-default GPU in the CLI that causes timing to fail and counts to sometimes be off.  However, this limitation does not carry over to the API, where selecting the non-default GPU does not cause problems.
 
 State of the Project
 -------------------
-Currently working on expanding the range of available API functions, specifically the non-static ones.  Let me know if you have any requests for features, and I'll see what I can do.
+Currently working on expanding the range of available functions, specifically the non-static ones.  Let me know if you have any requests for features, and I'll see what I can do.
