@@ -183,7 +183,7 @@ void CudaSieve::copyAndPrint()
 {
   h_primeOut = safeCudaMallocHost(h_primeOut, count*sizeof(uint64_t));
   cudaMemcpy(h_primeOut, d_primeOut, count*sizeof(uint64_t), cudaMemcpyDeviceToHost);
-  //for(uint64_t i = 0; i < count; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
+  for(uint64_t i = 0; i < count; i++) printf("%" PRIu64 "\n", h_primeOut[i]);
 }
 
 void CudaSieve::CLIPrimes()

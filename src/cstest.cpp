@@ -74,6 +74,9 @@ int main()
     std::cin >> bottom;
     std::cout << "::Range to check? ";
     std::cin >> range;
+    std::cout << "::Number of trials to check for inconsistent results? [1 - 9999999] ";
+    std::cin >> numTrials;
+    std::cout << std::endl;
   }
 
   if(testNum == 1){
@@ -83,7 +86,7 @@ int main()
 
     for(uint32_t i = 0; i < numTrials; i++){
 
-      if(!dist_bool(rng3)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
+      if(dist_bool(rng3)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
       else                bottom = 1 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
 
       range = ((unsigned long)dist_range_count(rng3));
@@ -154,7 +157,7 @@ int main()
     std::cout << "\tlog2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "          " << std::endl;
     uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
 
-    for(uint32_t i = 0; i < 1024; i++){
+    for(uint32_t i = 0; i < numTrials; i++){
       uint64_t primes = CudaSieve::countPrimes(bottom, top, gpuNum);
       std::cout << " Trial " << i+1 << "\r";
       std::cout << std::flush;
