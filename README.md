@@ -12,7 +12,9 @@ Binaries
 The available binaries have been compiled for x86-64 linux and Nvidia GPUs with compute capability 3.0 or greater (everything in the past four years).<br><br>
 <a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=libcudasieve.a">libcudasieve.a</a> - the CUDASieve library (see below)<br>
 <a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cudasieve">cudasieve</a> - the CUDASieve command line interface (type ```./cudasieve --help``` for commands)<br>
-<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cstest">cstest</a> - a command line utility for testing the correctness of CUDASieve<br><br>
+<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cstest">cstest</a> - a command line utility for testing the correctness of CUDASieve<br>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src=https://github.com/curtisseizert/CUDASieve/blob/master/Screenshot_cudasieve.png?raw=true "A screenshot of the CUDASieve CLI" align=center width=640>
 
 Benchmarks
 ----------
@@ -55,6 +57,8 @@ task of sieving these large primes does not increase the amount of memory used s
 Correctness
 -----------
 CUDASieve has been checked against primesieve in counts and with Rabin-Miller primality tests of the 64k primes on each end of the output using random, exponentially-distrubuted ranges of random length.  At the moment, it has passed about 150 000 consecutive tests without error.  When run concurrently with some other application running on the same device (e.g. folding@home), there appears to be about a 1 in 20000 chance that the count will be off by one.  These errors, however, are not repeatable when the program is running alone, even over 2 million trials.   One million of those were with a device driving a display, so that does not impose a similar liability for error.  These tests can be performed with the 'cstest' binary.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src=https://github.com/curtisseizert/CUDASieve/blob/master/Screenshot_cstest.png?raw=true width=640 "Example run of cstest">
 
 CUDASieve Library
 -----------------
