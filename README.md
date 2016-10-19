@@ -9,10 +9,10 @@ significant speedup.  For those interested in building CUDASieve from source, th
 
 Binaries
 --------
-The available binaries have been compiled for x86-64 linux and Nvidia GPUs with compute capability 3.0 or greater (everything in the past four years).<br>
+The available binaries have been compiled for x86-64 linux and Nvidia GPUs with compute capability 3.0 or greater (everything in the past four years).<br><br>
 <a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=libcudasieve.a">libcudasieve.a</a> - the CUDASieve library (see below)<br>
 <a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cudasieve">cudasieve</a> - the CUDASieve command line interface (type ```./cudasieve --help``` for commands)<br>
-<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cstest">cstest</a> - a command line utility for testing the correctness of CUDASieve<br>
+<a href="https://bintray.com/curtisseizert/CUDASieve/download_file?file_path=cstest">cstest</a> - a command line utility for testing the correctness of CUDASieve<br><br>
 
 Benchmarks
 ----------
