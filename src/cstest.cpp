@@ -89,7 +89,7 @@ int main()
       if(dist_bool(rng3)) bottom = 1 * (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
       else                bottom = 1 * (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
 
-      range = ((unsigned long)dist_range_count(rng3));
+      range = ((unsigned long)dist_range_test(rng3) * pow(2,(int)dist_exp_range(rng1)) - 1);
       uint64_t top = bottom + range;
 
       std::cout << "                                                                                                            \r";

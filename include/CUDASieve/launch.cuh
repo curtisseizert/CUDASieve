@@ -51,7 +51,6 @@ private:
   uint32_t * d_histogram = NULL, *d_histogram_lg = NULL;
   uint32_t hist_size_lg, blocks;
   uint16_t threads;
-  uint64_t numGuess;
   void allocateDevice();
   void fetch(BigSieve & bigsieve, CudaSieve & sieve);
   void fetchPartial(BigSieve & sieve, uint64_t * d_primeOut);

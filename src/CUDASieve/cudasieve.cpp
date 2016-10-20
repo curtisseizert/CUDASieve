@@ -164,7 +164,8 @@ inline void CudaSieve::launchCtl()
 {
   if(flags[0]){
     uint64_t numGuess;
-    if(top - bottom > 32768) numGuess = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 256*log(top-bottom);
+    if(bottom == 0) numGuess = (top/log(top))*(1+1.32/log(top));
+    else if(top - bottom > 32768) numGuess = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 256*log(top-bottom);
     else numGuess = ((1 + 2/log(top-bottom)) * (top - bottom)/log(bottom)) + 32;
     d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
     cudaMemset(d_primeOut, 0, numGuess*sizeof(uint64_t));
@@ -283,6 +284,8 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve(gpuNum);
 
+  if(bottom == 1) bottom--;
+
   sieve->top = top;
   sieve->bottom = bottom;
   sieve->flags[30] = 1;
@@ -298,6 +301,8 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
 uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
 
   sieve->top = top;
   sieve->bottom = bottom;
@@ -322,6 +327,8 @@ uint64_t * CudaSieve::getHostPrimes(uint64_t bottom, uint64_t top, size_t & coun
 std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
 
   sieve->top = top;
   sieve->bottom = bottom;
@@ -350,6 +357,8 @@ std::vector<uint64_t> CudaSieve::getHostPrimesVector(uint64_t bottom, uint64_t t
 uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
 
   sieve->top = top;
   sieve->bottom = bottom;

@@ -37,8 +37,6 @@ PrimeOutList::PrimeOutList(CudaSieve & sieve)
   threads = 512;
 
   hist_size_lg = blocks/512 + 1;
-  numGuess = (uint64_t) (sieve.top/log(sieve.top))*(1+1.32/log(sieve.top)) -
-  ((sieve.bottom/log(sieve.bottom))*(1+1.32/log(sieve.bottom)));
 
   allocateDevice();
 }
