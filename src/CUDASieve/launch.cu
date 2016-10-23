@@ -127,7 +127,6 @@ void PrimeList::allocate()
   cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
 
   cudaMemset(d_primeList, 0, piHighGuess*sizeof(uint32_t));
-
 }
 
 void PrimeList::iterSieve() // makes the list of primes on the device and then copies them back to the host
@@ -171,6 +170,7 @@ void PrimeList::iterSieve() // makes the list of primes on the device and then c
 
 PrimeList::~PrimeList()
 {
+  kerneldata.deallocate();
   cudaFree(d_bigSieve);
   cudaFree(d_histogram);
   cudaFree(d_histogram_lg);

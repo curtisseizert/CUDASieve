@@ -276,7 +276,7 @@ __global__ void device::bigSieveLg(uint32_t * d_primeList, uint32_t * d_next, ui
     else{
       uint64_t p = d_primeList[i]; // If this is a 32 bit data type, as would
                                    // seem logical, there are overflows in intermediate values
-                                   // above ((2^32)/6)^2 of ~2^58.83
+                                   // above ((2^32)/6)^2 or ~2^58.83
       uint64_t n = d_next[i];
       uint64_t off = n >> 3;       // (1) and (2)
       n &= 7;

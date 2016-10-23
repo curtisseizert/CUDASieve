@@ -2,9 +2,7 @@ utils/
 bitsievegen
 readsieve
 *.gch
-NewStuff.cpp
 *.o
-./CUDASieve
 cudasieve
 cstest
 libcudasieve.a

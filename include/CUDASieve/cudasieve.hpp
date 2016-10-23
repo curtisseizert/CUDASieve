@@ -41,10 +41,10 @@ void displayAttributes(CudaSieve & sieve);
 }
 
 template <typename T>
-inline void safeFree(T * array) {if(array){free(array); array = NULL;}}
+inline void safeFree(T * array) {if(array != NULL){free(array); array = NULL;}}
 
 template <typename T>
-inline void safeCudaFree(T * array) {if(array){cudaFree(array); array = NULL;}}
+inline void safeCudaFree(T * array) {if(array != NULL){cudaFree(array); array = NULL;}}
 
 template <typename T>
 inline void safeCudaFreeHost(T * array) {if(array != NULL){cudaFreeHost(array); array = NULL;}}

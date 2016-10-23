@@ -32,9 +32,9 @@ using namespace boost::multiprecision;
 
 int main()
 {
-  boost::random::ranlux48_base rng3;
-  boost::random::lagged_fibonacci44497 rng1;
-  boost::random::mt19937 rng2;
+  boost::random::ranlux48_base rng1;
+  boost::random::lagged_fibonacci44497 rng2;
+  boost::random::mt19937 rng3;
   boost::random::uniform_int_distribution<> dist(0,225726412); // 2^27.5 (to account for top of range below 2^64)
   boost::random::uniform_int_distribution<> dist_exp(1,36);
   boost::random::uniform_int_distribution<> dist_exp_range(2,25);
@@ -115,9 +115,9 @@ int main()
 
     for(uint32_t i = 0; i < numTrials; i++){
 
-      if(dist_bool(rng3)) bottom = (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng1)) - 1);
-      else                bottom = (uint64_t )dist(rng3) * (pow(2,(int)dist_exp(rng2)) - 1);
-      range = ((unsigned long)dist_range_test(rng3) * pow(2,(int)dist_exp_range(rng1)) - 1);
+      if(!dist_bool(rng1)) bottom = (uint64_t )dist(rng1) * (pow(2,(int)dist_exp(rng2)) - 1);
+      else                bottom = (uint64_t )dist(rng2) * (pow(2,(int)dist_exp(rng3)) - 1);
+      range = ((unsigned long)dist_range_test(rng1) * pow(2,(int)dist_exp_range(rng3)) - 1);
       uint64_t top = bottom + range;
 
       std::cout << "                                                                                                                       \r";
