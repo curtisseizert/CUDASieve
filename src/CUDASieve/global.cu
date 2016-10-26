@@ -239,7 +239,7 @@ __global__ void device::bigSieveSm(uint32_t * d_primeList, uint32_t * bigSieve,
   uint64_t bstart = bottom + 2*blockIdx.x*sieveBits;
 
   float pstop = sqrtf(bstart + 2*sieveBits);
-  unsigned int piHighGuess = (pstop/log(pstop))*(1+1.2762/log(pstop));
+  unsigned int piHighGuess = (pstop/logf(pstop))*(1+1.2762/logf(pstop));
   primeListLength = min((unsigned int) primeListLength, piHighGuess);
 
   device::sieveInit(s_sieve, sieveWords);
@@ -312,7 +312,7 @@ __global__ void device::bigSieveCount(uint32_t * bigSieve, uint32_t sieveKB, vol
   for(uint32_t i = threadIdx.x; i < sieveWords; i += threads_g){
     uint32_t x = bigSieve[i+blockStart];
     bigSieve[i+blockStart] ^= bigSieve[i+blockStart];
-    for(uint8_t j = 0; j < 32; j++) count += 1 & ~(x >> j);
+    count += __popc(~x);
   }
   __syncthreads();
   s_sieve[threadIdx.x] = count;

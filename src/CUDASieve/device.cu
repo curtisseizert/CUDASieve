@@ -9,6 +9,7 @@ by Curtis Seizert <cseizert@gmail.com>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <math_functions.h>
 
 #include "CUDASieve/device.cuh"
 
@@ -201,9 +202,7 @@ __device__ void device::countPrimes(uint32_t * s_sieve, uint16_t * s_counts, uin
   for(uint16_t i = threadIdx.x; i < sieveWords; i += threads)
   {
     uint32_t s = ~s_sieve[i];
-    uint8_t c = 0;
-    for(; s; c++) s &= s -1;
-    count += c;
+    count += __popc(s);
   }
   __syncthreads();
   s_counts[threadIdx.x] = count;
@@ -212,12 +211,8 @@ __device__ void device::countPrimes(uint32_t * s_sieve, uint16_t * s_counts, uin
 __device__ void device::countPrimesHist(uint32_t * s_sieve, uint32_t * s_counts, uint32_t sieveWords) // retains the original sieve data, maintains primes per word
 {
   for(uint16_t i = threadIdx.x; i < sieveWords; i += threads)
-  {
-    uint32_t s = ~s_sieve[i];
-    uint8_t c = 0;
-    for(; s; c++) s &= s -1;
-    s_counts[i] = c;
-  }
+    s_counts[i] = __popc(~s_sieve[i]);
+
   __syncthreads();
 }
 
@@ -246,9 +241,7 @@ __device__ void device::countPrimes(uint32_t * s_sieve, uint32_t sieveWords) // 
   {
     uint32_t s = ~s_sieve[i];
     s_sieve[i] ^= s_sieve[i];
-    uint8_t c = 0;
-    for(; s; c++) s &= s -1;
-    count += c;
+    count += __popc(s);
   }
   __syncthreads();
   s_sieve[threadIdx.x] = count;
