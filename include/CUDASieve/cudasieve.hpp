@@ -121,6 +121,8 @@ private:
   void launchCtl();
   void launchCtl(uint32_t maxPrime);
 
+  void phiCtl(uint32_t a);
+
   void copyAndPrint();
 
   void reset();
@@ -151,6 +153,9 @@ public:
 
   static uint64_t countPrimes(uint64_t top, uint16_t gpuNum = 0);
   static uint64_t countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
+
+  static uint64_t countPhi(uint64_t top, uint32_t a, uint16_t gpuNum = 0);
+  static uint64_t countPhi(uint64_t bottom, uint64_t top, uint32_t a, uint16_t gpuNum = 0);
 
   static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
   static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum = 0);

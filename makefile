@@ -17,6 +17,7 @@ NVCC = $(CUDA_DIR)/bin/nvcc
 CC = clang
 # Flags for the host compiler
 CCFLAGS = -O3 -std=c++11 -c
+WIGNORE = -Wno-return-stack-address
 
 # Flags for nvcc
 # ptxas-options=-dlcm=cg (vs. default of ca) is about a 2% performance gain
@@ -43,28 +44,33 @@ OBJS = $(patsubst %,$(OBJ_DIR)/%,$(_OBJS))
 MAIN = cudasieve
 CS_LIB = lib$(MAIN).a
 
-all: $(MAIN)
+all: $(MAIN) test
 
 # Tack on a main() function for the CLI
 $(MAIN): $(MAIN_OBJ) $(CS_LIB)
-	$(NVCC) $(NVCC_FLAGS) $(CC_LIBS) $(LIB_DIR) -l$(MAIN) $< -o $@
-	@echo
-	@echo  CUDASieve has been compiled.  cudasieve --help gives a list of options.
+	@$(NVCC) $(NVCC_FLAGS) $(CC_LIBS) $(LIB_DIR) -l$(MAIN) $< -o $@
+	@echo ""
+	@echo  "    CUDASieve has been compiled"
+	@echo  "    cudasieve --help gives a list of options."
+	@echo ""
 
 # Linking to make a library
 $(CS_LIB): $(OBJS) $(NV_SRCS)
-	$(NVCC) $(NVCC_FLAGS) -lib $(INCLUDES) $^ -o $@
+	@$(NVCC) $(NVCC_FLAGS) -lib $(INCLUDES) $^ -o $@
+	@echo "    CUDA    " $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
+	@$(CC) $(CCFLAGS) $(INCLUDES) $(WIGNORE) -o $@ $<
+	@echo "    CXX     " $@
 
 $(OBJ_DIR)/%.o: $(CLI_SRC_DIR)/%.cpp
-	$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
-
+	@$(CC) $(CCFLAGS) $(INCLUDES) -o $@ $<
+	@echo "    CXX     " $@
 ## The cudasieve testing utility depends on boost, openMP and primesieve.
 test: src/cstest.cpp $(CS_LIB)
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -O3 -Xcompiler -fopenmp -l$(MAIN) $(NVCC_LIBS) -lprimesieve $< -o cstest
-	@echo To run tests: cstest
+	@$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -O3 -Xcompiler -fopenmp -l$(MAIN) $(NVCC_LIBS) -lprimesieve $< -o cstest
+	@echo "    CXX    " $@
+	@echo "    To run tests: ./cstest"
 
 clean:
 	rm -f obj/*.o *.a cudasieve

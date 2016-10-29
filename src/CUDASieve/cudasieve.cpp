@@ -180,6 +180,22 @@ inline void CudaSieve::launchCtl()
   count = kerneldata.getCount();
 }
 
+inline void CudaSieve::phiCtl(uint32_t a)
+{
+  setKernelParam();
+  d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
+
+  if(a >= 12)
+    primeListLength = a - 12;
+  else
+    {primeListLength = 0; std::cout << "a must be >= 12" << std::endl;}
+
+  if(!flags[30] && !flags[0])     host::displayAttributes(*this);
+  if(!flags[2]  && !flags[0])     SmallSieve::run(*this);
+  if(flags[1]   || flags[0])      BigSieve::run(*this);
+  count = kerneldata.getCount();
+}
+
 void CudaSieve::copyAndPrint()
 {
   h_primeOut = safeCudaMallocHost(h_primeOut, count*sizeof(uint64_t));
@@ -292,6 +308,40 @@ uint64_t CudaSieve::countPrimes(uint64_t bottom, uint64_t top, uint16_t gpuNum)
   sieve->launchCtl();
 
   uint64_t count = *sieve->kerneldata.h_count;
+
+  delete sieve;
+
+  return count;
+}
+
+uint64_t CudaSieve::countPhi(uint64_t top, uint32_t a, uint16_t gpuNum)
+{
+  CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  sieve->top = top;
+  sieve->flags[30] = 1;
+
+  sieve->phiCtl(a);
+
+  uint64_t count = 1 + *sieve->kerneldata.h_count - a;
+
+  delete sieve;
+
+  return count;
+}
+
+uint64_t CudaSieve::countPhi(uint64_t bottom, uint64_t top, uint32_t a, uint16_t gpuNum)
+{
+  CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
+
+  sieve->top = top;
+  sieve->bottom = bottom;
+  sieve->flags[30] = 1;
+  sieve->phiCtl(a);
+
+  uint64_t count = 1 + *sieve->kerneldata.h_count - a;
 
   delete sieve;
 
