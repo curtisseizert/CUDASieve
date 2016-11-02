@@ -37,8 +37,8 @@ class KernelData{
   friend class CudaSieve;
   friend class PrimeList;
 private:
-  volatile uint64_t * h_count, * h_blocksComplete;
-  volatile uint64_t * d_count, * d_blocksComplete;
+  volatile uint64_t * h_count = NULL, * h_blocksComplete = NULL;
+  volatile uint64_t * d_count = NULL, * d_blocksComplete = NULL;
 public:
   uint64_t getCount(){return * h_count;}
   uint64_t getBlocks(){return * h_blocksComplete;}

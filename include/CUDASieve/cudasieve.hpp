@@ -89,6 +89,7 @@ private:
   bool flags[32] = {0};
   uint64_t bottom = 0, top = (1u << 30), count = 0;  // sieve parameters
   uint64_t * h_primeOut = NULL, * d_primeOut = NULL; // pointers to output arrays for prime generation
+  uint32_t * h_primeOut32 = NULL, * d_primeOut32 = NULL;
 
   uint16_t gpuNum = 0;            // used with cudaSetDevice
   uint32_t sieveBits, sieveKB = 16; // small sieve parameters, to be deleted from this class
@@ -96,14 +97,13 @@ private:
                                                                  //for list of sieving primes
   clock_t start_time;
   uint64_t itop, irange, ibottom; // these are safeguard parameters for segment functions
-  uint64_t sieveOutSize = 0;      // used with getBitSieve for debugging
+  uint64_t sieveOutBytes = 0;     // used with getBitSieve for debugging
+
+  uint32_t * sieveOut = NULL, * d_sieveOut = NULL;
 
   BigSieve bigsieve;
   SmallSieve smallsieve;
   KernelData kerneldata;
-
-  uint64_t getBottom(){return bottom;}
-  uint64_t getTop(){return top;}
 
   void makePrimeList(uint32_t maxPrime);
 
@@ -111,40 +111,38 @@ private:
   void setKernelParam();
   void checkRange();
 
-  void allocateSieveOut();
-  void allocateSieveOut(uint64_t size); // size in bytes
-
   void displayRange();
   void displaySieveAttributes();
 
   void run();
   void launchCtl();
   void launchCtl(uint32_t maxPrime);
-
   void phiCtl(uint32_t a);
 
   void copyAndPrint();
 
+  uint32_t * h_getSieveOut();
+  uint32_t * d_getSieveOut();
+
   void reset();
 
 public:
-  uint32_t * sieveOut = NULL;             // used with getBitSieve for debugging - holds
-                                          // a concatenation of all sieve segments
-
-  void setSieveKB(uint32_t sieveKB);
-  void setBigSieveKB(uint32_t bigSieveKB);
-  void setMaxPrime(uint32_t maxPrime);
-  void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
-  void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
-
-  void setGpu(uint16_t gpuNum);
-
   CudaSieve();
   CudaSieve(uint16_t gpuNum);
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range);
   ~CudaSieve();
 
-  bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
+  inline uint64_t getBottom(){return bottom;}
+  inline uint64_t getTop(){return top;}
+
+  inline void setSieveKB(uint32_t sieveKB){this -> sieveKB = sieveKB;}
+  inline void setBigSieveKB(uint32_t bigSieveKB){this -> bigsieve.bigSieveKB = bigSieveKB;}
+  inline void setMaxPrime(uint32_t maxPrime){this -> maxPrime_ = maxPrime;}
+  inline void setFlagOn(uint8_t flagnum){this -> flags[flagnum] = 1;}
+  inline void setFlagOff(uint8_t flagnum){this -> flags[flagnum] = 0;}
+  inline void setGpu(uint16_t gpuNum){this -> gpuNum = gpuNum; cudaSetDevice(gpuNum);}
+
+  inline bool isFlag(uint8_t flagnum){return this -> flags[flagnum];}
 
   static void listDevices();
   char * getCurrentDeviceName();
@@ -165,10 +163,25 @@ public:
   uint64_t * getHostPrimesSegment(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum);
   uint64_t * getDevicePrimesSegment(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum);
 
-  uint32_t * getBitSieve();
+  static uint32_t * genBitSieve(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
+  static uint32_t * genDeviceBitSieve(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
 
   void printPrimes(uint64_t * h_primeOut);
   double elapsedTime();
+
+  template <typename T>
+  inline void allocateSieveOut(T bytes = 0)
+  {
+    if(bytes != 0) sieveOutBytes = bytes;
+    if(sieveOut == NULL) sieveOut = (uint32_t *)malloc(sieveOutBytes);
+  }
+
+  template <typename T>
+  inline void allocateDeviceSieveOut(T bytes = 0)
+  {
+    if(bytes != 0) sieveOutBytes = bytes;
+    d_sieveOut = safeCudaMalloc(d_sieveOut, (size_t) bytes);
+  }
 };
 
 #endif

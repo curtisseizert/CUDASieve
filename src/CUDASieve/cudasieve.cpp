@@ -8,6 +8,7 @@ Curtis Seizert  <cseizert@gmail.com>
 */
 
 #include "CUDASieve/launch.cuh"
+#include "CUDASieve/primelist.cuh"
 #include "CUDASieve/cudasieve.hpp"
 #include "CUDASieve/host.hpp"
 
@@ -63,6 +64,7 @@ CudaSieve::~CudaSieve()
   safeCudaFreeHost(h_primeOut);
   safeCudaFree(d_primeOut);
   safeCudaFree(d_primeList);
+  kerneldata.deallocate();
 }
 
 void CudaSieve::reset()
@@ -71,20 +73,6 @@ void CudaSieve::reset()
   safeCudaFree(d_primeOut);
   *kerneldata.h_count = 0;
   start_time = clock();
-}
-
-void CudaSieve::setSieveKB(uint32_t sieveKB){this -> sieveKB = sieveKB;}
-void CudaSieve::setBigSieveKB(uint32_t bigSieveKB){this -> bigsieve.bigSieveKB = bigSieveKB;}
-void CudaSieve::setMaxPrime(uint32_t maxPrime){this -> maxPrime_ = maxPrime;}
-
-void CudaSieve::setGpu(uint16_t gpuNum){this -> gpuNum = gpuNum; cudaSetDevice(gpuNum);}
-
-void CudaSieve::allocateSieveOut(uint64_t size){sieveOut = new uint32_t[size/sizeof(uint32_t)];}
-
-void CudaSieve::allocateSieveOut()
-{
-  sieveOutSize = (top-bottom)/2;
-  sieveOut = new uint32_t[sieveOutSize/sizeof(uint32_t)];
 }
 
 void CudaSieve::listDevices()
@@ -427,15 +415,16 @@ uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & co
   return temp;
 }
 
-uint32_t * CudaSieve::getBitSieve()
+uint32_t * CudaSieve::h_getSieveOut()
 {
-  if(!flags[30])  displayRange();
-
   setKernelParam();
 
   d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
 
+  d_sieveOut = (uint32_t *)0xffffffff;
+
   bigsieve.setParameters(*this);
+  bigsieve.setupCopy(*this);
   bigsieve.allocate();
 
   bigsieve.fillNextMult();
@@ -444,4 +433,58 @@ uint32_t * CudaSieve::getBitSieve()
   count = kerneldata.getCount();
 
   return sieveOut;
+}
+
+uint32_t * CudaSieve::d_getSieveOut()
+{
+  setKernelParam();
+
+  d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
+
+  sieveOut = (uint32_t *)0xffffffff;
+
+  bigsieve.setParameters(*this);
+  bigsieve.setupCopy(*this);
+
+  bigsieve.launchLoopBitsieve(*this);
+
+  count = kerneldata.getCount();
+
+  return d_sieveOut;
+}
+
+uint32_t * CudaSieve::genBitSieve(uint64_t bottom, uint64_t top, uint16_t gpuNum)
+{
+  CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
+
+  sieve->top = top;
+  sieve->bottom = bottom;
+  sieve->flags[30] = 1;
+  sieve->flags[0] = 1;
+
+  uint32_t * bitsieve = sieve->h_getSieveOut();
+
+  delete sieve;
+
+  return bitsieve;
+}
+
+uint32_t * CudaSieve::genDeviceBitSieve(uint64_t bottom, uint64_t top, uint16_t gpuNum)
+{
+  CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
+
+  sieve->top = top;
+  sieve->bottom = bottom;
+  sieve->flags[30] = 1;
+  sieve->flags[0] = 1;
+
+  uint32_t * bitsieve = sieve->d_getSieveOut();
+
+  delete sieve;
+
+  return bitsieve;
 }

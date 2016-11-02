@@ -57,8 +57,8 @@ void KernelData::allocate()
 
 void KernelData::deallocate()
 {
-  cudaFreeHost((void *)h_count);
-  cudaFreeHost((void *)h_blocksComplete);
+  safeCudaFreeHost((void *)h_count);
+  safeCudaFreeHost((void *)h_blocksComplete);
 }
 
 void KernelData::displayProgress(uint64_t totBlocks)

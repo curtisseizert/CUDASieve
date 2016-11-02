@@ -31,6 +31,16 @@ The naming convention for sieve sizes:
   #define THREADS_PER_BLOCK_LG 256
 #endif
 
+__host__ __device__ static inline int64_t clzll(uint64_t x)
+{
+  uint64_t res;
+#ifdef __CUDA_ARCH__
+  res = __clzll(x);
+#else
+  asm("lzcnt %1, %0" : "=l" (res) : "l" (x));
+#endif
+  return res;
+}
 
 class PrimeList;
 class SmallSieve;
@@ -38,52 +48,6 @@ class BigSieve;
 class PrimeOutList;
 class CudaSieve;
 class KernelTime;
-
-
-class PrimeOutList{ // needs someone else's containers to put primes in.  Handles allocation.
-  friend class BigSieve;
-  friend class SmallSieve;
-  friend class KernelData;
-
-private:
-  uint32_t * d_histogram = NULL, *d_histogram_lg = NULL;
-  uint32_t hist_size_lg, blocks;
-  uint16_t threads;
-  void allocateDevice();
-  void fetch(BigSieve & bigsieve, CudaSieve & sieve);
-  void fetchPartial(BigSieve & sieve, uint64_t * d_primeOut);
-  void fetch();
-
-  void cleanupAll();
-  void cleanupAllDevice();
-
-public:
-  PrimeOutList(CudaSieve & sieve);
-  ~PrimeOutList();
-};
-
-class PrimeList{
-
-private:
-  KernelTime timer;
-  uint32_t primeListLength, * d_histogram = NULL, * d_histogram_lg = NULL, * d_primeListLength = NULL;
-  uint32_t hist_size_lg, piHighGuess, PL_Max, maxPrime, blocks, * d_primeList = NULL, * d_bigSieve = NULL, bigSieveKB = 1024;
-  uint16_t threads,sieveKB = 16;
-
-  KernelData kerneldata;
-
-  uint32_t * getPtr(){return d_primeList;}
-  void sievePrimeList();
-  void iterSieve();
-  void allocate();
-
-  PrimeList(uint32_t maxPrime);
-public:
-
-  ~PrimeList();
-  static uint32_t * getSievingPrimes(uint32_t maxPrime, uint32_t & primeListLength, bool silent = 1);
-
-};
 
 class SmallSieve{
   friend class CudaSieve;
@@ -128,13 +92,16 @@ private:
   ~BigSieve();
 
   void setParameters(CudaSieve & sieve);
+  void setupCopy(CudaSieve & sieve);
   void allocate();
   void fillNextMult();
 
   void launchLoop(CudaSieve & sieve);
   void launchLoopCopy(CudaSieve & sieve);
+  void launchLoopBitsieve(CudaSieve & sieve);
   void launchLoopPrimes(CudaSieve & sieve);
   void launchLoopPrimesSmall(CudaSieve & sieve);
+  void launchLoopPrimesSmall32(CudaSieve & sieve);
 
   void countPartialTop(CudaSieve & sieve);
 

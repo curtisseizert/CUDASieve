@@ -92,7 +92,7 @@ int main()
       range = ((unsigned long)dist_range_test(rng3) * pow(2,(int)dist_exp_range(rng1)) - 1);
       uint64_t top = bottom + range;
 
-      std::cout << "                                                                                                            \r";
+      std::cout << "                                                                                                  \r";
       std::cout << "\t" << tests_with_error << "\t" << i+1 << "\t" << log2(bottom) << "\t\t" << bottom << "\r";
       std::cout << "\t\t\t\t\t\t\t\t" << range << "          \r";
       std::cout << std::flush;
@@ -120,7 +120,7 @@ int main()
       range = ((unsigned long)dist_range_test(rng1) * pow(2,(int)dist_exp_range(rng3)) - 1);
       uint64_t top = bottom + range;
 
-      std::cout << "                                                                                                                       \r";
+      std::cout << "                                                                                                   \r";
       std::cout << "\t" << tests_with_error << "\t" << i+1 << "\t" << log2(bottom) << "\t\t" << bottom << "\r";
       std::cout << "\t\t\t\t\t\t\t\t" << range << "                            \r";
       std::cout << std::flush;
