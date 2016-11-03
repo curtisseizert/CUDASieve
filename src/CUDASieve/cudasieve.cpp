@@ -168,6 +168,29 @@ inline void CudaSieve::launchCtl()
   count = kerneldata.getCount();
 }
 
+inline void CudaSieve::getPrimes32()
+{
+  if(flags[0]){
+    uint64_t numGuess;
+    if(bottom == 0) numGuess = (top/log(top))*(1+1.32/log(top));
+    else if(top - bottom > 32768) numGuess = (top/log(top))*(1+1.12/log(top)) - (bottom/log(bottom))*(1+1.12/log(bottom)) + 256*log(top-bottom);
+    else numGuess = ((1 + 2/log(top-bottom)) * (top - bottom)/log(bottom)) + 32;
+    d_primeOut32 =  safeCudaMalloc(d_primeOut32, numGuess*sizeof(uint32_t));
+    cudaMemset(d_primeOut32, 0, numGuess*sizeof(uint32_t));
+  }
+
+  setKernelParam();
+  d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
+
+
+  bigsieve.setParameters(*this);
+  bigsieve.allocate();
+
+  bigsieve.launchLoopPrimesSmall32(*this);
+
+  count = kerneldata.getCount();
+}
+
 inline void CudaSieve::phiCtl(uint32_t a)
 {
   setKernelParam();
@@ -408,6 +431,53 @@ uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & co
   sieve->launchCtl();
   count = *sieve->kerneldata.h_count;
   uint64_t * temp = sieve->d_primeOut;
+  sieve->d_primeOut = NULL;
+
+  delete sieve;
+
+  return temp;
+}
+
+uint32_t * CudaSieve::getDevicePrimes32(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
+{
+  CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
+
+  sieve->top = top;
+  sieve->bottom = bottom;
+  sieve->flags[30] = 1;
+  sieve->flags[0] = 1;
+  sieve->flags[29] = 1;
+  sieve->flags[20] = 1;
+
+  sieve->getPrimes32();
+  sieve->h_primeOut32 = safeCudaMallocHost(sieve->h_primeOut32, count*sizeof(uint32_t));
+  cudaMemcpy(sieve->h_primeOut, sieve->d_primeOut, count*sizeof(uint32_t), cudaMemcpyDeviceToHost);
+  uint32_t * temp = sieve->h_primeOut32;            // copy address to temp pointer
+  sieve->h_primeOut32 = NULL;                       // prevent the array from being freed
+
+  delete sieve;
+
+  return temp;
+}
+
+uint32_t * CudaSieve::getHostPrimes32(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
+{
+  CudaSieve * sieve = new CudaSieve(gpuNum);
+
+  if(bottom == 1) bottom--;
+
+  sieve->top = top;
+  sieve->bottom = bottom;
+  sieve->flags[30] = 1;
+  sieve->flags[0] = 1;
+  sieve->flags[29] = 1;
+  sieve->flags[20] = 1;
+
+  sieve->getPrimes32();
+  count = *sieve->kerneldata.h_count;
+  uint32_t * temp = sieve->d_primeOut32;
   sieve->d_primeOut = NULL;
 
   delete sieve;

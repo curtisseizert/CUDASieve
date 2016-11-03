@@ -116,8 +116,9 @@ private:
 
   void run();
   void launchCtl();
-  void launchCtl(uint32_t maxPrime);
   void phiCtl(uint32_t a);
+
+  void getPrimes32();
 
   void copyAndPrint();
 
@@ -158,6 +159,10 @@ public:
   static uint64_t * getHostPrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
   static std::vector<uint64_t> getHostPrimesVector(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum = 0);
   static uint64_t * getDevicePrimes(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
+
+  static uint32_t * getHostPrimes32(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
+  static uint32_t * getDevicePrimes32(uint64_t bottom, uint64_t top, size_t & size, uint16_t gpuNum = 0);
+
 
   uint64_t countPrimesSegment(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
   uint64_t * getHostPrimesSegment(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum);

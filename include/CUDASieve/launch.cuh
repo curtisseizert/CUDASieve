@@ -21,9 +21,6 @@ The naming convention for sieve sizes:
 #ifndef _CUDASIEVE_LAUNCH
 #define _CUDASIEVE_LAUNCH
 
-#ifndef PL_SIEVE_WORDS
-  #define PL_SIEVE_WORDS 256
-#endif
 #ifndef THREADS_PER_BLOCK
   #define THREADS_PER_BLOCK 256 // changing this causes a segfault
 #endif

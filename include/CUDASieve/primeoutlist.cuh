@@ -28,7 +28,7 @@ Curtis Seizert <cseizert@gmail.com>
  private:
    uint32_t * d_histogram = NULL, *d_histogram_lg = NULL;
    uint32_t hist_size_lg, blocks;
-   uint16_t threads;
+   uint16_t threads, PL_sieveWords = 256;
 
    void allocateDevice();
    void fetch(BigSieve & bigsieve, CudaSieve & sieve)

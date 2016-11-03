@@ -14,7 +14,7 @@ Curtis Seizert <cseizert@gmail.com>
 
 PrimeOutList::PrimeOutList(CudaSieve & sieve)
 {
-  blocks = (sieve.bigsieve.bigSieveBits)/(32*PL_SIEVE_WORDS);
+  blocks = (sieve.bigsieve.bigSieveBits)/(32*PL_sieveWords);
   threads = 512;
 
   hist_size_lg = blocks/512 + 1;

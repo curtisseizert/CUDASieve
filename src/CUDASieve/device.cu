@@ -409,19 +409,12 @@ __device__ void device::exclusiveScanBig(uint32_t * s_array, uint32_t size)
   }
 }
 
-/*
-IMPORTANT: movePrimes requires at least one prime to be greater than maxPrime to
-correctly report the count.  However, this is only important in the case of
-primelist generation with the 32 bit version.  This may change when the big sieve
-gets support for better range granularity.
-*/
-
 template <typename T>
 __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts,
                                    uint32_t sieveWords, T * d_primeOut,
                                    uint32_t * d_histogram, uint64_t bstart, T maxPrime)
 {
-   // this is meant for when words per array == number of threads
+  // this is meant for when words per array == number of threads
   uint16_t i = threadIdx.x;
   uint16_t c = 0;                 // used to hold the count
   uint32_t s = ~s_sieve[i];       // primes are now represented as 1s
@@ -431,7 +424,7 @@ __device__ void device::movePrimes(uint32_t * s_sieve, uint16_t * s_counts,
   // s_sieve[0] is made ~0 so we can tell if it has been changed
   if(threadIdx.x == 0) s_sieve[0] |= ~s_sieve[0];
   for(uint16_t j = 0; j < 32; j++){
-    if(1 & (s >> j)){                              // if prime
+    if(1 & (s >> j)){                       // if prime
       T p = bstart + 64*i + 2*j + 1;        // calculate value
       // if value is above threshold, submit and break
       if(p > maxPrime) {atomicMin(&s_sieve[0], idx+c); break;}

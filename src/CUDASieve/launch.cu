@@ -53,9 +53,6 @@ void SmallSieve::count(CudaSieve & sieve)
 
 void BigSieve::run(CudaSieve & sieve) // coordinates the functions of this class for the CLI
 {
-  sieve.bigsieve.setParameters(sieve);
-  sieve.bigsieve.allocate();
-
   sieve.bigsieve.fillNextMult();
 
   if(!sieve.flags[30])                      host::displayAttributes(sieve.bigsieve);
