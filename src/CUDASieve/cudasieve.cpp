@@ -453,7 +453,7 @@ uint32_t * CudaSieve::getDevicePrimes32(uint64_t bottom, uint64_t top, size_t & 
 
   sieve->getPrimes32();
   sieve->h_primeOut32 = safeCudaMallocHost(sieve->h_primeOut32, count*sizeof(uint32_t));
-  cudaMemcpy(sieve->h_primeOut, sieve->d_primeOut, count*sizeof(uint32_t), cudaMemcpyDeviceToHost);
+  cudaMemcpy(sieve->h_primeOut32, sieve->d_primeOut32, count*sizeof(uint32_t), cudaMemcpyDeviceToHost);
   uint32_t * temp = sieve->h_primeOut32;            // copy address to temp pointer
   sieve->h_primeOut32 = NULL;                       // prevent the array from being freed
 
