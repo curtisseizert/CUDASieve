@@ -40,7 +40,7 @@ void SmallSieve::count(CudaSieve & sieve)
 {
   createStreams();
   timer.start();
-  device::smallSieve<<<totBlocks, THREADS_PER_BLOCK, (sieve.sieveKB << 10), stream[0]>>>
+  if(totBlocks != 0) device::smallSieve<<<totBlocks, THREADS_PER_BLOCK, (sieve.sieveKB << 10), stream[0]>>>
     (sieve.d_primeList, sieve.kerneldata.d_count, kernelBottom, sieve.sieveBits, sieve.primeListLength, sieve.kerneldata.d_blocksComplete);
   if(sieve.isFlag(4)) device::smallSieveIncompleteTop<<<1, THREADS_PER_BLOCK, 0, stream[1]>>>
     (sieve.d_primeList, top, sieve.sieveBits, sieve.primeListLength, sieve.top, sieve.kerneldata.d_count, sieve.kerneldata.d_blocksComplete, 1);
@@ -55,7 +55,7 @@ void BigSieve::run(CudaSieve & sieve) // coordinates the functions of this class
 {
   sieve.bigsieve.setParameters(sieve);
   sieve.bigsieve.allocate();
-  
+
   sieve.bigsieve.fillNextMult();
 
   if(!sieve.flags[30])                      host::displayAttributes(sieve.bigsieve);
