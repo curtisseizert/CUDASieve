@@ -438,7 +438,7 @@ uint64_t * CudaSieve::getDevicePrimes(uint64_t bottom, uint64_t top, size_t & co
   return temp;
 }
 
-uint32_t * CudaSieve::getDevicePrimes32(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
+uint32_t * CudaSieve::getHostPrimes32(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve(gpuNum);
 
@@ -462,7 +462,7 @@ uint32_t * CudaSieve::getDevicePrimes32(uint64_t bottom, uint64_t top, size_t & 
   return temp;
 }
 
-uint32_t * CudaSieve::getHostPrimes32(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
+uint32_t * CudaSieve::getDevicePrimes32(uint64_t bottom, uint64_t top, size_t & count, uint16_t gpuNum)
 {
   CudaSieve * sieve = new CudaSieve(gpuNum);
 
@@ -546,6 +546,7 @@ uint32_t * CudaSieve::genDeviceBitSieve(uint64_t bottom, uint64_t top, uint16_t 
   CudaSieve * sieve = new CudaSieve(gpuNum);
 
   if(bottom == 1) bottom--;
+  if(top < 16384) top = 16384;
 
   sieve->top = top;
   sieve->bottom = bottom;

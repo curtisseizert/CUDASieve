@@ -53,6 +53,9 @@ void SmallSieve::count(CudaSieve & sieve)
 
 void BigSieve::run(CudaSieve & sieve) // coordinates the functions of this class for the CLI
 {
+  sieve.bigsieve.setParameters(sieve);
+  sieve.bigsieve.allocate();
+  
   sieve.bigsieve.fillNextMult();
 
   if(!sieve.flags[30])                      host::displayAttributes(sieve.bigsieve);
@@ -262,7 +265,7 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
   timer.start();
 
   for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
-;
+
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB, primeListLength);
 
