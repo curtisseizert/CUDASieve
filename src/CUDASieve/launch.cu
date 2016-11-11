@@ -12,11 +12,11 @@ The naming convention for sieve sizes:
               this means bits * 2
 
 */
+#include "CUDASieve/primeoutlist.cuh"
 #include "CUDASieve/host.hpp"
 #include "CUDASieve/cudasieve.hpp"
 #include "CUDASieve/global.cuh"
 #include "CUDASieve/launch.cuh"
-#include "CUDASieve/primeoutlist.cuh"
 
 #include <iostream>
 #include <ctime>
@@ -232,7 +232,7 @@ void BigSieve::launchLoopBitsieve(CudaSieve & sieve)
 
 void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes on the device and then copies them back to the host
 {
-  PrimeOutList newlist(sieve);
+  if(!newlist.isInit) newlist.init(sieve);
 
   timer.start();
 
@@ -260,8 +260,7 @@ void BigSieve::launchLoopPrimes(CudaSieve & sieve) // makes the list of primes o
 
 void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of primes on the device and then copies them back to the host
 {
-  PrimeOutList newlist(sieve);
-
+  if(!newlist.isInit) newlist.init(sieve);
   timer.start();
 
   for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
@@ -289,8 +288,7 @@ void BigSieve::launchLoopPrimesSmall(CudaSieve & sieve) // makes the list of pri
 
 void BigSieve::launchLoopPrimesSmall32(CudaSieve & sieve) // makes the list of primes on the device and then copies them back to the host
 {
-  PrimeOutList newlist(sieve);
-
+  newlist.init(sieve);
   timer.start();
 
   for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
@@ -321,4 +319,73 @@ BigSieve::~BigSieve()
   safeCudaFree(d_next);
   safeCudaFree(d_away);
   safeCudaFree(d_bigSieve);
+}
+
+void PrimeOutList::init(CudaSieve & sieve)
+{
+  blocks = (sieve.bigsieve.bigSieveBits)/(32*PL_sieveWords);
+  threads = 512;
+
+  hist_size_lg = blocks/512 + 1;
+
+  allocateDevice();
+  isInit = 1;
+}
+
+PrimeOutList::PrimeOutList(CudaSieve & sieve)
+{
+  init(sieve);
+}
+
+PrimeOutList::~PrimeOutList()
+{
+  safeCudaFree(d_histogram);
+  safeCudaFree(d_histogram_lg);
+}
+
+void PrimeOutList::allocateDevice()
+{
+  d_histogram =       safeCudaMalloc(d_histogram, blocks*sizeof(uint32_t));
+  d_histogram_lg =    safeCudaMalloc(d_histogram_lg, hist_size_lg*sizeof(uint32_t));
+
+  cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
+  cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
+}
+
+void PrimeOutList::fetch(BigSieve & bigsieve, CudaSieve & sieve)
+{
+  uint64_t * d_ptr = sieve.d_primeOut + * sieve.kerneldata.h_count;
+
+  cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
+  cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
+
+  device::makeHistogram_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
+    (bigsieve.d_bigSieve, d_histogram, bigsieve.bottom, bigsieve.top);
+  device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
+    (d_histogram, d_histogram_lg, blocks);
+  device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>
+    (d_histogram_lg, sieve.kerneldata.d_count, hist_size_lg);
+  device::increment<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
+    (d_histogram, d_histogram_lg, blocks);
+  device::makePrimeList_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
+    (d_ptr, d_histogram, bigsieve.d_bigSieve, bigsieve.bottom, bigsieve.top);
+}
+
+void PrimeOutList::fetch32(BigSieve & bigsieve, CudaSieve & sieve)
+{
+  uint32_t * d_ptr = sieve.d_primeOut32 + * sieve.kerneldata.h_count;
+
+  cudaMemset(d_histogram, 0, blocks*sizeof(uint32_t));
+  cudaMemset(d_histogram_lg, 0, hist_size_lg*sizeof(uint32_t));
+
+  device::makeHistogram_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
+    (bigsieve.d_bigSieve, d_histogram, bigsieve.bottom, bigsieve.top);
+  device::exclusiveScan<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
+    (d_histogram, d_histogram_lg, blocks);
+  device::exclusiveScan<<<1,hist_size_lg,hist_size_lg*sizeof(uint32_t)>>>
+    (d_histogram_lg, sieve.kerneldata.d_count, hist_size_lg);
+  device::increment<<<hist_size_lg,threads,threads*sizeof(uint32_t)>>>
+    (d_histogram, d_histogram_lg, blocks);
+  device::makePrimeList_PLout<<<bigsieve.bigSieveKB, THREADS_PER_BLOCK>>>
+    (d_ptr, d_histogram, bigsieve.d_bigSieve, bigsieve.bottom, (uint32_t)bigsieve.top);
 }

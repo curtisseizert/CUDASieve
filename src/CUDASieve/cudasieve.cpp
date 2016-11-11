@@ -6,7 +6,7 @@ CudaSieve class functions for CUDASieve
 Curtis Seizert  <cseizert@gmail.com>
 
 */
-
+#include "CUDASieve/primeoutlist.cuh"
 #include "CUDASieve/launch.cuh"
 #include "CUDASieve/primelist.cuh"
 #include "CUDASieve/cudasieve.hpp"
@@ -31,7 +31,7 @@ CudaSieve::CudaSieve(uint16_t gpuNum)
   kerneldata.allocate();
 }
 
-CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range) // used for getting necessary data up front
+CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range, bool devOnly) // used for getting necessary data up front
 {                                                                       // for repetitive counts etc.
   start_time = clock();
   kerneldata.allocate();
@@ -46,7 +46,7 @@ CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range) // used for 
   setKernelParam();
 
   d_primeList = PrimeList::getSievingPrimes(maxPrime_, primeListLength, flags[30]);
-  if(top > (1ul << 40)){
+  if(top > (1ul << 40) || range != 0){
     bigsieve.setParameters(*this);
     bigsieve.allocate();
     bigsieve.fillNextMult();
@@ -54,8 +54,9 @@ CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range) // used for 
   if(range != 0){
     uint64_t numGuess = (uint64_t) ((bottom+range)/log((bottom+range))*(1+1.2762/log((bottom+range)))) -
       ((bottom/log(bottom))*(1+1.2762/log(bottom)));
-    h_primeOut =  safeCudaMallocHost(h_primeOut, numGuess*sizeof(uint64_t));
-    d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
+    if(!devOnly)  h_primeOut =  safeCudaMallocHost(h_primeOut, numGuess*sizeof(uint64_t));
+                  d_primeOut =  safeCudaMalloc(d_primeOut, numGuess*sizeof(uint64_t));
+    bigsieve.newlist.init(*this);
   }
 }
 
@@ -99,10 +100,16 @@ char * CudaSieve::getCurrentDeviceName()
 
 inline void CudaSieve::setKernelParam()
 {
-  if(top > 1ull << 63 && !flags[18])  bigsieve.bigSieveKB = 1u << 12; // bigger sieve size is more efficient above 2^63 (2^12 kb vs 2^10 kb)
-  if(top < 1ull << 40 && !flags[18] && (top - bottom) >= 1ull << 32) bigsieve.bigSieveKB = 1u << 14; // also optimization
-  if(top < 1u << 23)                  sieveKB = 2;                    // smaller sieve size is more efficient for very small numbers (< 2^23)
-  if(maxPrime_ == 0)                  maxPrime_ = (uint32_t) sqrt(top); // maximum sieving prime is top^0.5
+  if(bigsieve.d_bigSieve == NULL){
+    // bigger sieve size is more efficient above 2^63 (2^12 kb vs 2^10 kb)
+    if(top > 1ull << 63 && !flags[18])  bigsieve.bigSieveKB = 1u << 12;
+    // also optimization
+    if(top < 1ull << 40 && !flags[18] && (top - bottom) >= 1ull << 32) bigsieve.bigSieveKB = 1u << 14;
+  }
+  // smaller sieve size is more efficient for very small numbers (< 2^23)
+  if(top < 1u << 23)                  sieveKB = 2;
+  // maximum sieving prime is top^0.5
+  if(maxPrime_ == 0)                  maxPrime_ = (uint32_t) sqrt(top);
 
   bigsieve.bigSieveBits = bigsieve.bigSieveKB << 13;
   sieveBits = sieveKB << 13;
@@ -284,7 +291,8 @@ uint64_t * CudaSieve::getDevicePrimesSegment(uint64_t bottom, uint64_t top, size
   setKernelParam();
 
   bigsieve.setParameters(*this);
-  bigsieve.launchLoopPrimes(*this);
+  if(primeListLength >= 65536) bigsieve.launchLoopPrimes(*this);
+  else                         bigsieve.launchLoopPrimesSmall(*this);
 
   cudaDeviceSynchronize();
   count = *kerneldata.h_count;

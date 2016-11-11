@@ -17,6 +17,7 @@ The naming convention for sieve sizes:
 #include <cuda_runtime.h>
 #include <stdint.h>
 #include "host.hpp"
+// #include "CUDASieve/primeoutlist.cuh"
 
 #ifndef _CUDASIEVE_LAUNCH
 #define _CUDASIEVE_LAUNCH
@@ -46,6 +47,42 @@ class PrimeOutList;
 class CudaSieve;
 class KernelTime;
 
+#ifndef _PRIMEOUTLIST
+#define _PRIMEOUTLIST
+
+ class SmallSieve;
+ class BigSieve;
+ class CudaSieve;
+
+ class PrimeOutList{ // needs someone else's containers to put primes in.  Handles allocation.
+   friend class BigSieve;
+   friend class SmallSieve;
+   friend class KernelData;
+
+ private:
+   uint32_t * d_histogram = NULL, *d_histogram_lg = NULL;
+   uint32_t hist_size_lg, blocks;
+   uint16_t threads, PL_sieveWords = 256;
+   bool isInit = 0;
+
+   void allocateDevice();
+   inline void fetch(BigSieve & bigsieve, CudaSieve & sieve);
+   inline void fetch32(BigSieve & bigsieve, CudaSieve & sieve);
+
+
+   void cleanupAll();
+   void cleanupAllDevice();
+
+ public:
+   PrimeOutList(){}
+   PrimeOutList(CudaSieve & sieve);
+   ~PrimeOutList();
+
+   void init(CudaSieve & sieve);
+ };
+
+ #endif
+
 class SmallSieve{
   friend class CudaSieve;
   friend void host::displayAttributes(CudaSieve & sieve);
@@ -73,6 +110,7 @@ class BigSieve{
 
 private:
   KernelTime timer;
+  PrimeOutList newlist;
   cudaStream_t stream[2];
   uint16_t log2bigSieveSpan;
   uint32_t blocksSm, blocksLg, primeListLength, bigSieveKB = 1024, bigSieveBits, sieveKB;
@@ -106,8 +144,5 @@ public:
   static void run(CudaSieve & sieve);
 
 };
-
-
-
 
 #endif

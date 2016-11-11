@@ -6,3 +6,4 @@ readsieve
 cudasieve
 cstest
 libcudasieve.a
+samples/sumPrimes

@@ -95,8 +95,8 @@ KernelTime::KernelTime()
 
 KernelTime::~KernelTime()
 {
-  if(start_) {cudaEventDestroy(start_); start_ = NULL;}
-  if(stop_) {cudaEventDestroy(stop_); stop_ = NULL;}
+  if(start_ != NULL) {cudaEventDestroy(start_); start_ = NULL;}
+  if(stop_ != NULL) {cudaEventDestroy(stop_); stop_ = NULL;}
 }
 
 void KernelTime::start()

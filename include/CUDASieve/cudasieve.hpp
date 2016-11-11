@@ -130,7 +130,7 @@ private:
 public:
   CudaSieve();
   CudaSieve(uint16_t gpuNum);
-  CudaSieve(uint64_t bottom, uint64_t top, uint64_t range);
+  CudaSieve(uint64_t bottom, uint64_t top, uint64_t range, bool devOnly = 1);
   ~CudaSieve();
 
   inline uint64_t getBottom(){return bottom;}
