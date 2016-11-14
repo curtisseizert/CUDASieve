@@ -10,6 +10,7 @@ Curtis Seizert <cseizert@gmail.com>
 #include <iostream>
 #include <stdio.h>
 #include <vector>
+#include <ctime>
 
 #include "CUDASieve/host.hpp"
 #include "CUDASieve/cudasieve.hpp"
@@ -24,6 +25,9 @@ namespace host{
 int main(int argc, char* argv[])
 {
   // start the timer
+  clock_t start_time = clock();
+  float elapsed_time;
+
   CudaSieve * sieve = new CudaSieve;
 
   // parse the command line options passed to the executable and then set appropriate flags
@@ -34,7 +38,8 @@ int main(int argc, char* argv[])
 
   sieve->CLIPrimes();
 
-  if(!sieve->isFlag(30)) printf("\t%f seconds elapsed.\n", sieve->elapsedTime());
+  elapsed_time = (clock() - start_time)/((double) CLOCKS_PER_SEC);
+  if(!sieve->isFlag(30)) std::cout << "total time : " << elapsed_time << " seconds" << std::endl;
 
   cudaDeviceReset();
   return 0;

@@ -95,7 +95,6 @@ private:
   uint32_t sieveBits, sieveKB = 16; // small sieve parameters, to be deleted from this class
   uint32_t primeListLength, * d_primeList = NULL, maxPrime_ = 0; // parameters and device pointer
                                                                  //for list of sieving primes
-  clock_t start_time;
   uint64_t itop, irange, ibottom; // these are safeguard parameters for segment functions
   uint64_t sieveOutBytes = 0;     // used with getBitSieve for debugging
 
@@ -172,7 +171,6 @@ public:
   static uint32_t * genDeviceBitSieve(uint64_t bottom, uint64_t top, uint16_t gpuNum = 0);
 
   void printPrimes(uint64_t * h_primeOut);
-  double elapsedTime();
 
   template <typename T>
   inline void allocateSieveOut(T bytes = 0)

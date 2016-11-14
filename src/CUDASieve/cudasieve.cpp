@@ -19,7 +19,6 @@ Curtis Seizert  <cseizert@gmail.com>
 
 CudaSieve::CudaSieve()
 {
-  start_time = clock();
   kerneldata.allocate();
 }
 
@@ -27,13 +26,11 @@ CudaSieve::CudaSieve(uint16_t gpuNum)
 {
   this->setGpu(gpuNum);
 
-  start_time = clock();
   kerneldata.allocate();
 }
 
 CudaSieve::CudaSieve(uint64_t bottom, uint64_t top, uint64_t range, bool devOnly) // used for getting necessary data up front
 {                                                                       // for repetitive counts etc.
-  start_time = clock();
   kerneldata.allocate();
 
   flags[30] = 1;
@@ -73,7 +70,6 @@ void CudaSieve::reset()
   safeCudaFreeHost(h_primeOut);
   safeCudaFree(d_primeOut);
   *kerneldata.h_count = 0;
-  start_time = clock();
 }
 
 void CudaSieve::listDevices()
@@ -148,11 +144,6 @@ inline void CudaSieve::displayRange()
 {
   std::cout << "\n" << "\tCounting primes from " << bottom << " to " << top << std::endl;
   std::cout << "\tUsing Device " << gpuNum << ": " << getCurrentDeviceName() << "\n" << std::endl;
-}
-
-double CudaSieve::elapsedTime()
-{
-  return (clock() - start_time)/((double) CLOCKS_PER_SEC);
 }
 
 inline void CudaSieve::launchCtl()

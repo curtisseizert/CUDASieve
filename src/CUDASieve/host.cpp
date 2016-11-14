@@ -31,7 +31,6 @@ void host::displayAttributes(CudaSieve & sieve)
     std::cout << "Threads         :  " << THREADS_PER_BLOCK << std::endl;
     std::cout << "Sieve Size      :  " << sieve.sieveKB << " kb" << std::endl;
   }
-  if(!sieve.flags[30]) std::cout << "Initialization took " << sieve.elapsedTime() << " seconds.\n" << std::endl;
 }
 
 void host::displayAttributes(const BigSieve & bigsieve)
