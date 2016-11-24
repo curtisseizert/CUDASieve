@@ -7,9 +7,12 @@
 ##
 
 # Location of the CUDA toolkit
+# In ubuntu (all debian based distros?) this is /usr/local/cuda
 CUDA_DIR = /opt/cuda
 # Location of the *necessary* legacy gcc compiler for nvcc to use.  Maximum
-# supported version is 5.4
+# supported version is 5.4.  In ubuntu, this will be located in /usr/bin/
+# from scratch: sudo apt install g++-4.9
+# then change LEGACY_CC_PATH to /usr/bin/g++-4.9
 LEGACY_CC_PATH = /bin/g++-5
 # Compute capability of the target GPU
 GPU_ARCH = compute_30
@@ -19,7 +22,6 @@ GPU_CODE = sm_30,sm_32,sm_35,sm_37,sm_50,sm_52,sm_53,sm_60,sm_61,sm_62
 # Compilers to use
 NVCC = $(CUDA_DIR)/bin/nvcc
 CC = clang
-LEGACY_CC_PATH = /bin/g++-5
 # Flags for the host compiler
 CCFLAGS = -O3 -std=c++11 -c -g
 WIGNORE = -Wno-return-stack-address
@@ -52,7 +54,7 @@ NVOBJS = $(patsubst %,$(OBJ_DIR)/%,$(_NVOBJS))
 MAIN = cudasieve
 CS_LIB = lib$(MAIN).a
 
-all: $(MAIN) test commands
+all: $(MAIN) commands
 
 test: cstest
 
@@ -86,12 +88,14 @@ cstest: src/cstest.cpp $(CS_LIB)
 	@$(NVCC) $(NVCC_FLAGS) $(INCLUDES) $(LIB_DIR) -O3 -Xcompiler -fopenmp -l$(MAIN) $(NVCC_LIBS) -lprimesieve $< -o cstest
 	@echo "     CXX      " $@
 
-commands: $(MAIN) test
+commands: $(MAIN)
 	@echo ""
-	@echo  "    CUDASieve has been compiled"
-	@echo  "    cudasieve --help gives a list of options."
-	@echo  "    cstest runs correctness tests."
-	@echo ""
+	@echo  "    CUDASieve has been compiled. 'cudasieve --help' gives a list of options."
+	@echo  "    cstest runs correctness tests.  'make test' to compile"
+	@echo  "    Note: cstest depends on boost, openMP, and primesieve libraries"
+	@echo  "    'make samples' compiles the one sample.  Currently accepting"
+	@echo  "    ideas for more samples.  Have fun!"
+	@echo  ""
 
 clean:
 	rm -f obj/*.o
@@ -102,5 +106,7 @@ clean:
 	rm -f src/CUDASieve/*.gch
 
 # samples
+samples: samples/sumPrimes
+
 samples/% : samples/%.cu $(CS_LIB)
 	$(NVCC) $(NVCC_FLAGS) $(CC_LIBS) $(INCLUDES) $(LIB_DIR) -l$(MAIN) $< -o $@
