@@ -5,7 +5,7 @@ A GPU accelerated C++/CUDA C implementation of the segmented sieve of Eratosthen
 CUDASieve is a high performance segmented sieve of Eratosthenes for counting and generating prime numbers on Nvidia GPUs.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
 algorithm</a> on the GPU.
 While this code is in no way as elegant as that of Kim Walisch's <a href="http://primesieve.org">primesieve</a>, the use of GPU acceleration allows a
-significant speedup.  For those interested in building CUDASieve from source, the makefile will require changes to CUDA_DIR.  A smaller number of device architectures can be specified depending on your use case, though this has no effect on performance.  Let me know if you have any hangups.
+significant speedup.  For those interested in building CUDASieve from source, the makefile will require changes to CUDA_DIR.  A smaller number of device architectures can be specified depending on your use case, though this has no effect on performance.  A couple hints are provided at the top of the makefile.  Let me know if you have any hangups.
 
 Binaries
 --------
@@ -46,7 +46,7 @@ Benchmarks
 
 Additionally, this code contains a way of generating a
  list of sieving primes, in order, on the device that is much faster than the bottleneck of ordering them on the host.
-  Generating the list of 189 961 800 primes from 38 to 4e9 takes just 50 ms.  This is about 15.2 GB of primes/second!  Primes
+  Generating the list of 189 961 800 primes from 38 to 4e9 takes just 50 ms.  This is about 15.2 GB of primes/second (about the max speed of PCIe 3.0 x16)!  Primes
   are also prepared to be printed in the same way.  For example, the kernel time for preparing an array of all the (25 818 737) primes from 2<sup>60</sup> to 2<sup>60</sup>+2<sup>30</sup> and getting this array to the host is 157 ms with the GTX 1080.
   
   This implementation of Oliveira's bucket method requires a fixed 10 bytes of DRAM per prime, which equates to just over 2 GB
@@ -139,7 +139,7 @@ int main()
   return 0;
 }
 ```
-The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  The relevant functions are:
+The above code creates a CudaSieve object with an appropriate list of sieving primes for ranges up to ```top``` and with memory allocated for copying arrays of primes over range ```range``` as long as they are above ```bottom```.  However, I have been having some issues with them and depend mostly on the static member functions, which are very reliable.  The relevant non-static member functions are:
 ```C++
   CudaSieve(uint64_t bottom, uint64_t top, uint64_t range); 
                                                               
