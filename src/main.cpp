@@ -11,6 +11,7 @@ Curtis Seizert <cseizert@gmail.com>
 #include <stdio.h>
 #include <vector>
 #include <ctime>
+#include <cuda_profiler_api.h>
 
 #include "CUDASieve/host.hpp"
 #include "CUDASieve/cudasieve.hpp"
@@ -32,7 +33,7 @@ int main(int argc, char* argv[])
 
   // parse the command line options passed to the executable and then set appropriate flags
   host::parseOptions(argc, argv, sieve);
-
+  cudaProfilerStart();
   // this is for the -h and --help switches
   if(sieve->isFlag(31)) return 0;
 
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 
   elapsed_time = (clock() - start_time)/((double) CLOCKS_PER_SEC);
   if(!sieve->isFlag(30)) std::cout << "total time : " << elapsed_time << " seconds" << std::endl;
-
+  cudaProfilerStop();
   cudaDeviceReset();
   return 0;
 }

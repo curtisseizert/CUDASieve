@@ -9,7 +9,7 @@ by Curtis Seizert <cseizert@gmail.com>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <math_functions.h>
+//#include <math_functions.h>
 
 #include "CUDASieve/device.cuh"
 

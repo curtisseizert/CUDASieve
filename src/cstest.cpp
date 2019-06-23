@@ -98,7 +98,7 @@ int main()
       std::cout << std::flush;
 
       uint64_t primes = CudaSieve::countPrimes(bottom, top, gpuNum);
-      uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
+      uint64_t numPsPrimes = primesieve_count_primes(bottom, top);
 
       if(primes != numPsPrimes){
         std::cout << "\n\t\tLength mismatch: primesieve: " << numPsPrimes << "\t cudasieve: " << primes << std::endl;
@@ -130,7 +130,7 @@ int main()
       std::cout << "\t\t\t\t\t\t\t\t\t\t" << len << "          \r";
       std::cout << std::flush;
 
-      uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
+      uint64_t numPsPrimes = primesieve_count_primes(bottom, top);
 
 
 
@@ -155,7 +155,7 @@ int main()
     uint64_t top = bottom + range;
 
     std::cout << "\tlog2(bottom) = " << log2(bottom) << "     bottom =  " << bottom  << "          " << std::endl;
-    uint64_t numPsPrimes = primesieve_parallel_count_primes(bottom, top);
+    uint64_t numPsPrimes = primesieve_count_primes(bottom, top);
 
     for(uint32_t i = 0; i < numTrials; i++){
       uint64_t primes = CudaSieve::countPrimes(bottom, top, gpuNum);

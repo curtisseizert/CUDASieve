@@ -81,7 +81,6 @@ class CudaSieve {
   friend class SmallSieve;
   friend class BigSieve;
   friend class PrimeOutList;
-  friend class Debug;
   friend void host::displayAttributes(CudaSieve & sieve);
   friend void host::parseOptions(int argc, char* argv[], CudaSieve * sieve);
 

@@ -292,7 +292,7 @@ void BigSieve::launchLoopPrimesSmall32(CudaSieve & sieve) // makes the list of p
   timer.start();
 
   for(uint64_t value = 1; bottom < top; bottom += 2*bigSieveBits, value++){
-;
+
     device::bigSieveSm<<<blocksSm, THREADS_PER_BLOCK, (sieveKB << 10), stream[0]>>>
       (d_primeList, d_bigSieve, bottom, sieveKB, primeListLength);
 

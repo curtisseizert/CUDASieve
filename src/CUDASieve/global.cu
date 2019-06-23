@@ -12,7 +12,7 @@ start around 350.  The above statement may become inaccurate at any time.
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <math_functions.h>
+//#include <cuda_runtime.h>
 #include <iostream>
 
 #include "CUDASieve/device.cuh"
