@@ -9,10 +9,9 @@
 # Location of the CUDA toolkit
 # In ubuntu (all debian based distros?) this is /usr/local/cuda
 CUDA_DIR = /opt/cuda
-# Location of the *necessary* legacy gcc compiler for nvcc to use.  Maximum
-# supported version is 5.4.  In ubuntu, this will be located in /usr/bin/
-# from scratch: sudo apt install g++-4.9
-# then change LEGACY_CC_PATH to /usr/bin/g++-4.9
+# Location of the gcc compiler for nvcc to use.  CUDA 10 supports gcc 8.xx
+# If using an earlier version, it may be necessary to change to a different gcc
+# compiler.
 LEGACY_CC_PATH = /bin/g++-8
 # Compute capability of the target GPU
 GPU_ARCH = compute_30
@@ -42,6 +41,8 @@ OBJ_DIR = obj
 
 ## Cannot use device.cu here because it is #include linked to global.cu!
 ## this is necessary because the nvcc linker sucks with device code!
+## Note: This was true with CUDA 8.  I don't know if it has been fixed in more
+## recent versions.
 #NV_SRCS = src/CUDASieve/global.cu src/CUDASieve/launch.cu src/CUDASieve/device.cu
 _MAIN_OBJ = main.o
 MAIN_OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_MAIN_OBJ))
