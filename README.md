@@ -1,6 +1,8 @@
 # CUDASieve
 A GPU accelerated C++/CUDA C implementation of the segmented sieve of Eratosthenes
 
+Update April 2021:
+The code compiles again with the latest version of CUDA on my computer.  This required getting rid of some legacy GPU capability.  If you have a compute capability 3.2 to 5.0 gpu, you can make the required changes in the makefile, but I have removed those architectures from the main branch.  It is about six years of backwards compatibility.  If this means your hardware won't work, your beef is with tech companies' embrace of planned obsolescence, friend.
 
 CUDASieve is a high performance segmented sieve of Eratosthenes for counting and generating prime numbers on Nvidia GPUs.  This work contains some optimizations found in Ben Buhrow's <a href="https://sites.google.com/site/bbuhrow/home/cuda-sieve-of-eratosthenes">CUDA Sieve of Eratosthenes</a> as well as an attempt at implementing Tomás Oliveira e Silva's <a href="http://sweet.ua.pt/tos/software/prime_sieve.html">Bucket
 algorithm</a> on the GPU.
