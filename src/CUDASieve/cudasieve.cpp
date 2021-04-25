@@ -143,7 +143,7 @@ void CudaSieve::setFlags()
 inline void CudaSieve::displayRange()
 {
   std::cout << "\n" << "\tCounting primes from " << bottom << " to " << top << std::endl;
-  std::cout << "\tUsing Device " << gpuNum << ": " << getCurrentDeviceName() << "\n" << std::endl;
+  //std::cout << "\tUsing Device " << gpuNum << ": " << getCurrentDeviceName() << "\n" << std::endl;
 }
 
 inline void CudaSieve::launchCtl()

@@ -50,8 +50,8 @@ void KernelData::allocate()
   cudaHostGetDevicePointer((unsigned long **)&d_count, (unsigned long *)h_count, 0);
   cudaHostGetDevicePointer((unsigned long **)&d_blocksComplete, (unsigned long *)h_blocksComplete, 0);
 
-  *h_count = 0;
-  *h_blocksComplete = 0;
+//  *h_count = 0;
+//  *h_blocksComplete = 0;
 }
 
 void KernelData::deallocate()

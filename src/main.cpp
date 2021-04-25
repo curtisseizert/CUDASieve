@@ -7,8 +7,9 @@ Curtis Seizert <cseizert@gmail.com>
 
 */
 
+#include <new>
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 #include <ctime>
 #include <cuda_profiler_api.h>
@@ -33,6 +34,13 @@ int main(int argc, char* argv[])
 
   // parse the command line options passed to the executable and then set appropriate flags
   host::parseOptions(argc, argv, sieve);
+  // check to make there are CUDA enabled devices
+  int count;
+  cudaGetDeviceCount(&count);
+  if(count == 0){
+    std::cout<<"No CUDA enabled devices available!"<<std::endl;
+    return 1;
+  }
   cudaProfilerStart();
   // this is for the -h and --help switches
   if(sieve->isFlag(31)) return 0;
@@ -81,6 +89,7 @@ void host::parseOptions(int argc, char* argv[], CudaSieve * sieve)
       if(arg == "-g")           sieve->setGpu(atoi(argv[i+1]));
       if(arg == "-sievekb")     sieve->setSieveKB(atoi(argv[i+1]));
       if(arg == "-partial")     sieve->setMaxPrime(atoi(argv[i+1]));
+
 
     }
   }
