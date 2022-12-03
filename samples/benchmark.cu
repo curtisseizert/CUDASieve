@@ -1,12 +1,13 @@
 #include <stdint.h>
 #include <map>
 #include <chrono>
+#include <cstdlib>
 
 #include "CUDASieve/cudasieve.hpp"
 
 using namespace std::chrono;
 
-const uint64_t SIEVE_SIZE = 1000000;
+const uint64_t DEFAULT_SIEVE_SIZE = 1000000;
 
 const std::map<uint64_t, const int> resultsDictionary =
 {
@@ -22,25 +23,42 @@ const std::map<uint64_t, const int> resultsDictionary =
     { 10000000000UL, 455052511 },
 };
 
+// Assumes any first argument is the desired sieve size. Defaults to DEFAULT_SIEVE_SIZE.
+uint64_t determineSieveSize(int argc, char *argv[])
+{
+    if (argc < 2)
+        return DEFAULT_SIEVE_SIZE;
+
+    uint64_t sieveSize = strtoul(argv[1]);
+
+    if (sieveSize == 0) 
+        return DEFAULT_SIEVE_SIZE;
+
+    if (resultsDictionary.find(sieveSize) == resultsDictionary.end())
+        fprintf(stderr, "WARNING: Results cannot be validated for selected sieve size of %zu!\n\n", sieveSize);
+
+    return sieveSize;
+}
+
 void printResults(uint64_t sieveSize, size_t primeCount, double duration, uint64_t passes)
 {
     auto expectedCount = resultsDictionary.find(sieveSize);
-    auto validCount = expectedCount != resultsDictionary.end() && expectedCount->second == primeCount;
+    auto countValidated = expectedCount != resultsDictionary.end() && expectedCount->second == primeCount;
 
-    fprintf(stderr, "Passes: %zu, Time: %lf, Avg: %lf, Limit: %zu, Count: %zu, Valid: %d\n", 
+    fprintf(stderr, "Passes: %zu, Time: %lf, Avg: %lf, Limit: %zu, Count: %zu, Validated: %d\n\n", 
             passes,
             duration,
             duration / passes,
             sieveSize,
             primeCount,
-            validCount);
+            countValidated);
 
-    fprintf(stderr, "\n");
     printf("rbergen_cuda;%zu;%f;1;algorithm=other,faithful=yes,bits=1\n", passes, duration);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    uint64_t sieveSize = determineSieveSize(argc, argv);
     uint64_t passes = 0;
     auto tStart = steady_clock::now();
     size_t primeCount;
@@ -48,11 +66,11 @@ int main()
     while (true)
     {
         // Implementation is faithful because CudaSieve::getDevicePrimes creates and destroys a sieve class instance
-        uint64_t *primes = CudaSieve::getDevicePrimes(0, SIEVE_SIZE, primeCount);
+        uint64_t *primes = CudaSieve::getDevicePrimes(0, sieveSize, primeCount);
         passes++;
         if (duration_cast<seconds>(steady_clock::now() - tStart).count() >= 5)
         {
-            printResults(SIEVE_SIZE, primeCount, duration_cast<microseconds>(steady_clock::now() - tStart).count() / 1000000.0, passes);
+            printResults(sieveSize, primeCount, duration_cast<microseconds>(steady_clock::now() - tStart).count() / 1000000.0, passes);
             break;
         }
     } 
