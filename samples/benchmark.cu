@@ -29,7 +29,7 @@ uint64_t determineSieveSize(int argc, char *argv[])
     if (argc < 2)
         return DEFAULT_SIEVE_SIZE;
 
-    uint64_t sieveSize = strtoul(argv[1], null, 0);
+    uint64_t sieveSize = strtoul(argv[1], nullptr, 0);
 
     if (sieveSize == 0) 
         return DEFAULT_SIEVE_SIZE;
