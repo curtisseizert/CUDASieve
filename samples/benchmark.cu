@@ -71,17 +71,17 @@ int main(int argc, char *argv[])
         uint64_t *primes = CudaSieve::getDevicePrimes(0, sieveSize, primeCount);
         passes++;
         cudaFree(primes);
-	cycleCount++;
-	// Reset the device every RESET_CYCLE_COUNT runs, as recommended in the CUDASieve README
-	if (cycleCount == RESET_CYCLE_COUNT)
-	{
-	    cudaDeviceReset();
-	    cycleCount = 0;
-	}
         if (duration_cast<seconds>(steady_clock::now() - tStart).count() >= 5)
         {
             printResults(sieveSize, primeCount, duration_cast<microseconds>(steady_clock::now() - tStart).count() / 1000000.0, passes);
             break;
+        }
+        cycleCount++;
+        // Reset the device every RESET_CYCLE_COUNT passes, as recommended in the CUDASieve README
+        if (cycleCount == RESET_CYCLE_COUNT)
+        {
+            cudaDeviceReset();
+            cycleCount = 0;
         }
     } 
 }
