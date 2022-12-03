@@ -8,6 +8,7 @@
 using namespace std::chrono;
 
 const uint64_t DEFAULT_SIEVE_SIZE = 1000000;
+const int RESET_CYCLE_COUNT = 1000;
 
 const std::map<uint64_t, const int> resultsDictionary =
 {
@@ -36,7 +37,7 @@ uint64_t determineSieveSize(int argc, char *argv[])
 
     if (resultsDictionary.find(sieveSize) == resultsDictionary.end())
         fprintf(stderr, "WARNING: Results cannot be validated for selected sieve size of %zu!\n\n", sieveSize);
-
+    
     return sieveSize;
 }
 
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
 {
     uint64_t sieveSize = determineSieveSize(argc, argv);
     uint64_t passes = 0;
+    int cycleCount = 0;
     auto tStart = steady_clock::now();
     size_t primeCount;
 
@@ -68,6 +70,14 @@ int main(int argc, char *argv[])
         // Implementation is faithful because CudaSieve::getDevicePrimes creates and destroys a sieve class instance
         uint64_t *primes = CudaSieve::getDevicePrimes(0, sieveSize, primeCount);
         passes++;
+        cudaFree(primes);
+	cycleCount++;
+	// Reset the device every RESET_CYCLE_COUNT runs, as recommended in the CUDASieve README
+	if (cycleCount == RESET_CYCLE_COUNT)
+	{
+	    cudaDeviceReset();
+	    cycleCount = 0;
+	}
         if (duration_cast<seconds>(steady_clock::now() - tStart).count() >= 5)
         {
             printResults(sieveSize, primeCount, duration_cast<microseconds>(steady_clock::now() - tStart).count() / 1000000.0, passes);
