@@ -8,14 +8,14 @@
 
 # Location of the CUDA toolkit
 # In ubuntu (all debian based distros?) this is /usr/local/cuda
-CUDA_DIR = /opt/cuda
+CUDA_DIR = /usr/local/cuda
 # Location of the gcc compiler for nvcc to use.  CUDA 10 supports gcc 8.xx
 # If using an earlier version, it may be necessary to change to a different gcc
 # compiler.
 LEGACY_CC_PATH = g++
 # Compute capability of the target GPU
-GPU_ARCH = compute_52
-GPU_CODE = sm_52,sm_53,sm_60,sm_61,sm_62
+GPU_ARCH = compute_60
+GPU_CODE = sm_60,sm_61,sm_62
 
 # Compilers to use
 NVCC = $(CUDA_DIR)/bin/nvcc
@@ -106,7 +106,7 @@ clean:
 	rm -f src/CUDASieve/*.gch
 
 # samples
-samples: samples/sumPrimes
+samples: samples/sumPrimes samples/benchmark
 
 samples/% : samples/%.cu $(CS_LIB)
 	$(NVCC) $(NVCC_FLAGS) $(CC_LIBS) $(INCLUDES) $(LIB_DIR) -l$(MAIN) $< -o $@

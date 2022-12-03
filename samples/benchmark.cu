@@ -1,7 +1,10 @@
 #include <stdint.h>
 #include <map>
+#include <chrono>
 
 #include "CUDASieve/cudasieve.hpp"
+
+using namespace std::chrono;
 
 const uint64_t SIEVE_SIZE = 1000000;
 
@@ -19,12 +22,12 @@ const std::map<uint64_t, const int> resultsDictionary =
     { 10000000000UL, 455052511 },
 };
 
-void printResults(uint64_t sieveSize, size_t primeCount, double duration, int passes)
+void printResults(uint64_t sieveSize, size_t primeCount, double duration, uint64_t passes)
 {
     auto expectedCount = resultsDictionary.find(sieveSize);
     auto validCount = expectedCount != resultsDictionary.end() && expectedCount->second == primeCount;
 
-    fprintf(stderr, "Passes: %d, Time: %lf, Avg: %lf, Limit: %ld, Count: %d, Valid: %d\n", 
+    fprintf(stderr, "Passes: %zu, Time: %lf, Avg: %lf, Limit: %zu, Count: %zu, Valid: %d\n", 
             passes,
             duration,
             duration / passes,
@@ -33,7 +36,7 @@ void printResults(uint64_t sieveSize, size_t primeCount, double duration, int pa
             validCount);
 
     fprintf(stderr, "\n");
-    printf("rbergen_cuda;%d;%f;1;algorithm=other,faithful=yes,bits=1\n", passes, duration);
+    printf("rbergen_cuda;%zu;%f;1;algorithm=other,faithful=yes,bits=1\n", passes, duration);
 }
 
 int main()
