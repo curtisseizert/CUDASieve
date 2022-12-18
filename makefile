@@ -106,7 +106,7 @@ clean:
 	rm -f src/CUDASieve/*.gch
 
 # samples
-samples: samples/sumPrimes
+samples: samples/sumPrimes samples/benchmark
 
 samples/% : samples/%.cu $(CS_LIB)
 	$(NVCC) $(NVCC_FLAGS) $(CC_LIBS) $(INCLUDES) $(LIB_DIR) -l$(MAIN) $< -o $@
